@@ -289,7 +289,7 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
             adapters.append(matching_set.end_sequence)
 
     start_sequence_names = set(x.start_sequence[0] for x in matching_sets)
-    end_sequence_names = set(x.start_sequence[0] for x in matching_sets)
+    end_sequence_names = set(x.end_sequence[0] for x in matching_sets)
 
     # If single-threaded, do the work in a simple loop.
     if threads == 1:
