@@ -257,6 +257,7 @@ class NanoporeRead(object):
 
 def align_adapter(read_seq, adapter_seq, scoring_scheme_vals):
     alignment_result = adapter_alignment(read_seq, adapter_seq, scoring_scheme_vals)
+
     result_parts = alignment_result.split(',')
 
     read_start = int(result_parts[0])
@@ -267,8 +268,14 @@ def align_adapter(read_seq, adapter_seq, scoring_scheme_vals):
 
     aligned_adapter_length = abs(adapter_end - adapter_start)
 
-    full_length_score = raw_score / (scoring_scheme_vals[0] * len(adapter_seq))
-    aligned_length_score = raw_score / (scoring_scheme_vals[0] * aligned_adapter_length)
+    try:
+        full_length_score = raw_score / (scoring_scheme_vals[0] * len(adapter_seq))
+    except ZeroDivisionError:
+        full_length_score = 0
+    try:
+        aligned_length_score = raw_score / (scoring_scheme_vals[0] * aligned_adapter_length)
+    except ZeroDivisionError:
+        aligned_length_score = 0
     return full_length_score, aligned_length_score, read_start, read_end
 
 
