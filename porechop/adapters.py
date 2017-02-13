@@ -26,8 +26,8 @@ class Adapter(object):
             self.end_sequence = both_ends_sequence
         self.best_start_score, self.best_end_score = 0.0, 0.0
 
-    def get_average_best_score(self):
-        return (self.best_start_score + self.best_end_score) / 2.0
+    def best_start_or_end_score(self):
+        return max(self.best_start_score, self.best_end_score)
 
 
 ADAPTERS = [Adapter('SQK-MAP006',

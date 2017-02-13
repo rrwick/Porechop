@@ -29,23 +29,23 @@ def main():
     args = get_arguments()
     reads, read_type = load_reads(args.input, args.verbosity, args.print_dest)
 
-    best_adapter = find_best_match_adapter_set(reads, args.verbosity, args.end_size,
-                                               args.scoring_scheme_vals, args.print_dest)
+    matching_sets = find_matching_adapter_sets(reads, args.verbosity, args.end_size,
+                                               args.scoring_scheme_vals, args.print_dest,
+                                               args.adapter_threshold)
 
-    display_adapter_set_results(best_adapter, args.verbosity, args.adapter_threshold,
-                                args.print_dest)
+    display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
 
-    if best_adapter.get_average_best_score() < args.adapter_threshold:
+    if not matching_sets:
         print('No strong adapter matches - not proceeding with trimming\n', file=args.print_dest)
         sys.exit()
 
-    find_adapters_at_read_ends(reads, best_adapter, args.verbosity, args.end_size,
+    find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
                                args.extra_end_trim, args.end_threshold, args.scoring_scheme_vals,
                                args.print_dest, args.min_trim_size)
 
     display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
 
-    find_adapters_in_read_middles(reads, best_adapter, args.verbosity, args.middle_threshold,
+    find_adapters_in_read_middles(reads, matching_sets, args.verbosity, args.middle_threshold,
                                   args.extra_middle_trim_good_side, args.extra_middle_trim_bad_side,
                                   args.scoring_scheme_vals, args.print_dest)
 
@@ -79,10 +79,10 @@ def get_arguments():
     adapter_search_group = parser.add_argument_group('Adapter search settings',
                                                      'Control how the program determines which '
                                                      'adapter sets are present')
-    adapter_search_group.add_argument('--adapter_threshold', type=float, default=0.7,
+    adapter_search_group.add_argument('--adapter_threshold', type=float, default=0.8,
                                       help='An adapter set has to score at least this well to be '
                                            'labelled as present and trimmed off (0.0 to 1.0, '
-                                           'default: 0.7)')
+                                           'default: 0.8)')
     adapter_search_group.add_argument('--scoring_scheme', type=str, default='3,-6,-5,-2',
                                       help='Comma-delimited string of alignment scores: match,'
                                            'mismatch, gap open, gap extend (default: "3,-6,-5,-2"')
@@ -149,7 +149,8 @@ def load_reads(input_filename, verbosity, print_dest):
     return reads, read_type
 
 
-def find_best_match_adapter_set(reads, verbosity, end_size, scoring_scheme_vals, print_dest):
+def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, print_dest,
+                               adapter_threshold):
     """
     Aligns all of the adapter sets to the start/end of reads to see which (if any) matches best.
     """
@@ -158,42 +159,47 @@ def find_best_match_adapter_set(reads, verbosity, end_size, scoring_scheme_vals,
     for read in reads:
         for adapter_set in ADAPTERS:
             read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
-    best_adapter = sorted(ADAPTERS, key=lambda x: x.get_average_best_score())[-1]
-    return best_adapter
+    return [x for x in ADAPTERS if x.best_start_or_end_score() >= adapter_threshold]
 
 
-def display_adapter_set_results(best_adapter, verbosity, adapter_threshold, print_dest):
+def display_adapter_set_results(matching_sets, verbosity, print_dest):
     if verbosity < 1:
         return
     table = [['Adapter set', 'Score']]
-    best_row_num = -1
+    row_colours = {}
+    matching_set_names = [x.name for x in matching_sets]
     for adapter_set in ADAPTERS:
-        score = adapter_set.get_average_best_score() * 100.0
+        score = adapter_set.best_start_or_end_score() * 100.0
         score = '%.1f' % score + '%'
         table.append([adapter_set.name, score])
-        if adapter_set.name == best_adapter.name and \
-                adapter_set.get_average_best_score() >= adapter_threshold:
-            best_row_num = len(table) - 1
+        if adapter_set.name in matching_set_names:
+            row_colours[len(table) - 1] = 'green'
     if verbosity > 0:
-        print_table(table, print_dest, alignments='LR', row_colour={best_row_num: 'green'})
+        print_table(table, print_dest, alignments='LR', row_colour=row_colours)
         print('\n', file=print_dest)
 
 
-def find_adapters_at_read_ends(reads, best_adapter, verbosity, end_size, extra_trim_size,
+def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_trim_size,
                                end_threshold, scoring_scheme_vals, print_dest, min_trim_size):
     if verbosity > 0:
-        print(bold_underline('Trimming ' + best_adapter.name + ' adapters from read ends'),
+        matching_set_names = ', '.join([x.name for x in matching_sets])
+        print(bold_underline('Trimming ' + matching_set_names + ' adapters from read ends'),
               file=print_dest)
-        name_len = max(len(best_adapter.start_sequence[0]), len(best_adapter.end_sequence[0]))
-        print('  ' + best_adapter.start_sequence[0].rjust(name_len) + ': ' +
-              red(best_adapter.start_sequence[1]), file=print_dest)
-        print('  ' + best_adapter.end_sequence[0].rjust(name_len) + ': ' +
-              red(best_adapter.end_sequence[1]) + '\n', file=print_dest)
+        name_len = max(max(len(x.start_sequence[0]) for x in matching_sets),
+                       max(len(x.end_sequence[0]) for x in matching_sets))
+        for matching_set in matching_sets:
+            print('  ' + matching_set.start_sequence[0].rjust(name_len) + ': ' +
+                  red(matching_set.start_sequence[1]), file=print_dest)
+            print('  ' + matching_set.end_sequence[0].rjust(name_len) + ': ' +
+                  red(matching_set.end_sequence[1]), file=print_dest)
+        print('', file=print_dest)
+
     for read in reads:
-        read.find_start_trim(best_adapter, end_size, extra_trim_size, end_threshold,
-                             scoring_scheme_vals, min_trim_size)
-        read.find_end_trim(best_adapter, end_size, extra_trim_size, end_threshold,
-                           scoring_scheme_vals, min_trim_size)
+        for matching_set in matching_sets:
+            read.find_start_trim(matching_set, end_size, extra_trim_size, end_threshold,
+                                 scoring_scheme_vals, min_trim_size)
+            read.find_end_trim(matching_set, end_size, extra_trim_size, end_threshold,
+                               scoring_scheme_vals, min_trim_size)
         if verbosity > 1:
             print(read.get_formatted_start_seq(end_size, extra_trim_size) + '...' +
                   read.get_formatted_end_seq(end_size, extra_trim_size), file=print_dest)
@@ -217,15 +223,34 @@ def display_read_end_trimming_summary(reads, verbosity, print_dest):
     print('\n', file=print_dest)
 
 
-def find_adapters_in_read_middles(reads, best_adapter, verbosity, middle_threshold,
+def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_threshold,
                                   extra_middle_trim_good_side, extra_middle_trim_bad_side,
                                   scoring_scheme_vals, print_dest):
-    print(bold_underline('Splitting reads containing ' + best_adapter.name + ' adapters'),
-          file=print_dest)
+    if verbosity > 0:
+        matching_set_names = ', '.join([x.name for x in matching_sets])
+        print(bold_underline('Splitting reads containing ' + matching_set_names + ' adapters'),
+              file=print_dest)
+
+    adapters = []
+    for matching_set in matching_sets:
+        adapters.append(matching_set.start_sequence)
+        if matching_set.end_sequence[1] != matching_set.start_sequence[1]:
+            adapters.append(matching_set.end_sequence)
+
+    start_sequence_names = set(x.start_sequence[0] for x in matching_sets)
+    end_sequence_names = set(x.start_sequence[0] for x in matching_sets)
+
     for read in reads:
-        read.find_middle_adapters(best_adapter, verbosity, middle_threshold,
-                                  extra_middle_trim_good_side, extra_middle_trim_bad_side,
-                                  scoring_scheme_vals, print_dest)
+        hit_str = read.find_middle_adapters(adapters, middle_threshold, extra_middle_trim_good_side,
+                                  extra_middle_trim_bad_side, scoring_scheme_vals,
+                                  start_sequence_names, end_sequence_names)
+
+        if read.middle_adapter_positions and verbosity > 0:
+            print(read.name, file=print_dest)
+            print(hit_str, file=print_dest, end='')
+            if verbosity > 1:
+                print(read.get_formatted_middle_seq(), file=print_dest)
+            print('', file=print_dest, flush=True)
 
 
 def output_reads(reads, out_format, output, read_type, verbosity, min_split_read_size, print_dest):

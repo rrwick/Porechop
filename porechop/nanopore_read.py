@@ -140,19 +140,14 @@ class NanoporeRead(object):
             trim_amount = (end_size - read_start) + extra_trim_size
             self.end_trim_amount = max(self.end_trim_amount, trim_amount)
 
-    def find_middle_adapters(self, adapter_set, verbosity, middle_threshold,
-                             extra_middle_trim_good_side, extra_middle_trim_bad_side,
-                             scoring_scheme_vals, print_dest):
+    def find_middle_adapters(self, adapters, middle_threshold, extra_middle_trim_good_side,
+                             extra_middle_trim_bad_side, scoring_scheme_vals,
+                             start_sequence_names, end_sequence_names):
         """
         Aligns an adapter sequence to the whole read to find places where the read should be split.
         """
-        adapters = [adapter_set.start_sequence]
-        if adapter_set.end_sequence[1] != adapter_set.start_sequence[1]:
-            adapters += [adapter_set.end_sequence]
-
         masked_seq = self.get_seq_with_start_end_adapters_trimmed()
-        first_hit = True
-
+        hit_str = ''
         for adapter_name, adapter_seq in adapters:
 
             # We keep aligning adapters as long we get strong hits, so we can find multiple
@@ -161,32 +156,25 @@ class NanoporeRead(object):
                 score, _, read_start, read_end = align_adapter(masked_seq, adapter_seq,
                                                                scoring_scheme_vals)
                 if score >= middle_threshold:
-                    if first_hit:
-                        print(self.name, file=print_dest)
-                        first_hit = False
-
-                    print('  found ' + adapter_name + ' (pos ' + str(read_start) + '-' +
-                          str(read_end) + ')', file=print_dest)
-
                     masked_seq = masked_seq[:read_start] + '-' * (read_end - read_start) + \
                         masked_seq[read_end:]
                     self.middle_adapter_positions.update(range(read_start, read_end))
 
+                    hit_str += '  found ' + adapter_name + ' (pos ' + str(read_start) + '-' + \
+                               str(read_end) + ')\n'
+
                     trim_start = read_start - extra_middle_trim_good_side
-                    if adapter_name == adapter_set.start_sequence[0]:
+                    if adapter_name in start_sequence_names:
                         trim_start = read_start - extra_middle_trim_bad_side
+
                     trim_end = read_end + extra_middle_trim_good_side
-                    if adapter_name == adapter_set.end_sequence[0]:
+                    if adapter_name in end_sequence_names:
                         trim_end = read_end + extra_middle_trim_bad_side
 
                     self.middle_trim_positions.update(range(trim_start, trim_end))
                 else:
                     break
-
-        if self.middle_adapter_positions:
-            if verbosity > 1:
-                print(self.get_formatted_middle_seq(), file=print_dest)
-            print('', file=print_dest)
+        return hit_str
 
     def get_formatted_start_seq(self, end_size, extra_trim_size):
         """
