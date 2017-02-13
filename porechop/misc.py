@@ -18,6 +18,8 @@ import os
 import gzip
 import re
 import textwrap
+import shutil
+import argparse
 
 
 def float_to_str(num, decimals, max_num=0):
@@ -317,3 +319,23 @@ def add_line_breaks_to_sequence(sequence, line_length):
         seq_with_breaks += sequence[pos:pos+line_length] + '\n'
         pos += line_length
     return seq_with_breaks
+
+
+class MyHelpFormatter(argparse.HelpFormatter):
+    """
+    This is a custom formatter class for argparse. It allows for some custom formatting,
+    in particular for the help texts with multiple options (like bridging mode and verbosity level).
+    http://stackoverflow.com/questions/3853722
+    """
+    def __init__(self, prog):
+        terminal_width = shutil.get_terminal_size().columns
+        os.environ['COLUMNS'] = str(terminal_width)
+        max_help_position = min(max(24, terminal_width // 3), 40)
+        super().__init__(prog, max_help_position=max_help_position)
+
+    def _get_help_string(self, action):
+        help_text = action.help
+        if action.default != argparse.SUPPRESS and 'default' not in help_text.lower() and \
+                action.default is not None:
+            help_text += ' (default: ' + str(action.default) + ')'
+        return help_text

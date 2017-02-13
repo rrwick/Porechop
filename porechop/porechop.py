@@ -21,7 +21,8 @@ import sys
 import subprocess
 import multiprocessing
 from multiprocessing.dummy import Pool as ThreadPool
-from .misc import load_fasta_or_fastq, print_table, red, bold_underline, check_file_exists
+from .misc import load_fasta_or_fastq, print_table, red, bold_underline, check_file_exists, \
+    MyHelpFormatter
 from .adapters import ADAPTERS
 from .nanopore_read import NanoporeRead
 from .version import __version__
@@ -50,7 +51,7 @@ def main():
 
     find_adapters_in_read_middles(reads, matching_sets, args.verbosity, args.middle_threshold,
                                   args.extra_middle_trim_good_side, args.extra_middle_trim_bad_side,
-                                  args.scoring_scheme_vals, args.print_dest)
+                                  args.scoring_scheme_vals, args.print_dest, args.threads)
 
     output_reads(reads, args.format, args.output, read_type, args.verbosity,
                  args.min_split_read_size, args.print_dest)
@@ -64,7 +65,8 @@ def get_arguments():
 
     parser = argparse.ArgumentParser(description='Porechop: a tool for finding adapters in Oxford '
                                                  'Nanopore reads, trimming them from the ends and '
-                                                 'splitting reads with internal adapters')
+                                                 'splitting reads with internal adapters',
+                                     formatter_class=MyHelpFormatter)
     main_group = parser.add_argument_group('Main options')
     main_group.add_argument('-i', '--input', required=True,
                             help='FASTA or FASTQ of input reads (required)')
@@ -72,16 +74,15 @@ def get_arguments():
                             help='Filename for FASTA or FASTQ of trimmed reads (if not set, '
                                  'trimmed reads will be printed to stdout)')
     main_group.add_argument('--format', choices=['auto', 'fasta', 'fastq'], default='auto',
-                            help='Output format for the reads (default: auto) - if auto, the '
+                            help='Output format for the reads - if auto, the '
                                  'format will be chosen based on the output filename or the input '
-                                 'read format)')
+                                 'read format')
     main_group.add_argument('-v', '--verbosity', type=int, default=1,
                             help='Level of progress information: 0 = none, 1 = some, 2 = full '
-                                 '(default: 1) - info will be sent to stdout if reads are saved to '
+                                 ' - output will go to stdout if reads are saved to '
                                  'a file and stderr if reads are printed to stdout')
     main_group.add_argument('-t', '--threads', type=int, default=default_threads,
-                            help='Number of threads to use for adapter alignment (default: ' +
-                                 str(default_threads) + ')')
+                            help='Number of threads to use for adapter alignment')
 
     main_group.add_argument('--version', action='version', version=__version__)
 
@@ -90,46 +91,43 @@ def get_arguments():
                                                      'adapter sets are present')
     adapter_search_group.add_argument('--adapter_threshold', type=float, default=0.8,
                                       help='An adapter set has to score at least this well to be '
-                                           'labelled as present and trimmed off (0.0 to 1.0, '
-                                           'default: 0.8)')
+                                           'labelled as present and trimmed off (0.0 to 1.0)')
     adapter_search_group.add_argument('--check_reads', type=int, default=1000,
                                       help='This many reads will be aligned to all possible '
                                            'adapters to determine which adapter sets are present')
     adapter_search_group.add_argument('--scoring_scheme', type=str, default='3,-6,-5,-2',
                                       help='Comma-delimited string of alignment scores: match,'
-                                           'mismatch, gap open, gap extend (default: "3,-6,-5,-2"')
+                                           'mismatch, gap open, gap extend')
 
     end_trim_group = parser.add_argument_group('End adapter settings',
                                                'Control the trimming of adapters from read ends')
-    end_trim_group.add_argument('--end_size', type=int, default=60,
+    end_trim_group.add_argument('--end_size', type=int, default=100,
                                 help='The number of base pairs at each end of the read which will '
                                      'be searched for adapter sequences')
     end_trim_group.add_argument('--min_trim_size', type=int, default=4,
-                                help='Adapter alignments smaller than this will be ignored '
-                                     '(default: 4)')
+                                help='Adapter alignments smaller than this will be ignored')
     end_trim_group.add_argument('--extra_end_trim', type=int, default=2,
                                 help='This many additional bases will be removed next to adapters '
                                      'found at the ends of reads')
     end_trim_group.add_argument('--end_threshold', type=float, default=0.5,
                                 help='Adapters at the ends of reads must score at least this well '
-                                     'to be removed (0.0 to 1.0, default: 0.5)')
+                                     'to be removed (0.0 to 1.0)')
 
     middle_trim_group = parser.add_argument_group('Middle adapter settings',
                                                   'Control the splitting of read from middle '
                                                   'adapters')
     middle_trim_group.add_argument('--middle_threshold', type=float, default=0.7,
                                    help='Adapters in the middle of reads must score at least this '
-                                        'well to be removed and split the read (0.0 to 1.0, '
-                                        'default: 0.7)')
+                                        'well to be removed and split the read (0.0 to 1.0)')
     middle_trim_group.add_argument('--extra_middle_trim_good_side', type=int, default=10,
                                    help='This many additional bases will be removed next to '
-                                        'middle adapters on their "good" side (default: 10)')
+                                        'middle adapters on their "good" side')
     middle_trim_group.add_argument('--extra_middle_trim_bad_side', type=int, default=100,
                                    help='This many additional bases will be removed next to '
-                                        'middle adapters on their "bad" side (default: 100)')
+                                        'middle adapters on their "bad" side')
     middle_trim_group.add_argument('--min_split_read_size', type=int, default=1000,
                                    help='Post-split read pieces smaller than this many base pairs '
-                                        'will not be outputted (default: 1000)')
+                                        'will not be outputted')
 
     args = parser.parse_args()
 
@@ -173,14 +171,18 @@ def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, 
         print(bold_underline('Looking for known adapter sets'), flush=True, file=print_dest)
 
     read_subset = reads[:check_reads]
+
+    # If single-threaded, do the work in a simple loop.
     if threads == 1:
         for read in read_subset:
             for adapter_set in ADAPTERS:
                 read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
+
+    # If multi-threaded, use a thread pool.
     else:
         def align_adapter_set_one_arg(all_args):
-            read, adapter_set, end_size, scoring_scheme_vals = all_args
-            read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
+            r, a, b, c = all_args
+            r.align_adapter_set(a, b, c)
         with ThreadPool(threads) as pool:
             arg_list = []
             for read in read_subset:
@@ -193,7 +195,7 @@ def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, 
 def display_adapter_set_results(matching_sets, verbosity, print_dest):
     if verbosity < 1:
         return
-    table = [['Adapter set', 'Score']]
+    table = [['Set', 'Score']]
     row_colours = {}
     matching_set_names = [x.name for x in matching_sets]
     for adapter_set in ADAPTERS:
@@ -223,15 +225,35 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
                   red(matching_set.end_sequence[1]), file=print_dest)
         print('', file=print_dest)
 
-    for read in reads:
-        for matching_set in matching_sets:
-            read.find_start_trim(matching_set, end_size, extra_trim_size, end_threshold,
+    # If single-threaded, do the work in a simple loop.
+    if threads == 1:
+        for read in reads:
+            read.find_start_trim(matching_sets, end_size, extra_trim_size, end_threshold,
                                  scoring_scheme_vals, min_trim_size)
-            read.find_end_trim(matching_set, end_size, extra_trim_size, end_threshold,
+            read.find_end_trim(matching_sets, end_size, extra_trim_size, end_threshold,
                                scoring_scheme_vals, min_trim_size)
-        if verbosity > 1:
-            print(read.get_formatted_start_seq(end_size, extra_trim_size) + '...' +
-                  read.get_formatted_end_seq(end_size, extra_trim_size), file=print_dest)
+            if verbosity > 1:
+                print(read.formatted_start_and_end_seq(end_size, extra_trim_size), file=print_dest)
+
+    # If multi-threaded, use a thread pool.
+    else:
+        def start_end_trim_one_arg(all_args):
+            r, a, b, c, d, e, f, v = all_args
+            r.find_start_trim(a, b, c, d, e, f)
+            r.find_end_trim(a, b, c, d, e, f)
+            if v > 1:
+                return r.formatted_start_and_end_seq(b, c)
+            else:
+                return ''
+        with ThreadPool(threads) as pool:
+            arg_list = []
+            for read in reads:
+                arg_list.append((read, matching_sets, end_size, extra_trim_size, end_threshold,
+                                 scoring_scheme_vals, min_trim_size, verbosity))
+            for out in pool.imap(start_end_trim_one_arg, arg_list):
+                if verbosity > 1:
+                    print(out, file=print_dest, flush=True)
+
     if verbosity > 1:
         print('', file=print_dest)
 
@@ -253,8 +275,8 @@ def display_read_end_trimming_summary(reads, verbosity, print_dest):
 
 
 def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_threshold,
-                                  extra_middle_trim_good_side, extra_middle_trim_bad_side,
-                                  scoring_scheme_vals, print_dest):
+                                  extra_trim_good_side, extra_trim_bad_side, scoring_scheme_vals,
+                                  print_dest, threads):
     if verbosity > 0:
         matching_set_names = ', '.join([x.name for x in matching_sets])
         print(bold_underline('Splitting reads containing ' + matching_set_names + ' adapters'),
@@ -269,17 +291,31 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
     start_sequence_names = set(x.start_sequence[0] for x in matching_sets)
     end_sequence_names = set(x.start_sequence[0] for x in matching_sets)
 
-    for read in reads:
-        hit_str = read.find_middle_adapters(adapters, middle_threshold, extra_middle_trim_good_side,
-                                  extra_middle_trim_bad_side, scoring_scheme_vals,
-                                  start_sequence_names, end_sequence_names)
+    # If single-threaded, do the work in a simple loop.
+    if threads == 1:
+        for read in reads:
+            read.find_middle_adapters(adapters, middle_threshold, extra_trim_good_side,
+                                      extra_trim_bad_side, scoring_scheme_vals,
+                                      start_sequence_names, end_sequence_names)
 
-        if read.middle_adapter_positions and verbosity > 0:
-            print(read.name, file=print_dest)
-            print(hit_str, file=print_dest, end='')
-            if verbosity > 1:
-                print(read.get_formatted_middle_seq(), file=print_dest)
-            print('', file=print_dest, flush=True)
+            if read.middle_adapter_positions and verbosity > 0:
+                print(read.middle_adapter_results(verbosity), file=print_dest, flush=True)
+
+    # If multi-threaded, use a thread pool.
+    else:
+        def find_middle_adapters_one_arg(all_args):
+            r, a, b, c, d, e, f, g, v = all_args
+            r.find_middle_adapters(a, b, c, d, e, f, g)
+            return r.middle_adapter_results(v)
+        with ThreadPool(threads) as pool:
+            arg_list = []
+            for read in reads:
+                arg_list.append((read, adapters, middle_threshold, extra_trim_good_side,
+                                 extra_trim_bad_side, scoring_scheme_vals, start_sequence_names,
+                                 end_sequence_names, verbosity))
+            for out in pool.imap(find_middle_adapters_one_arg, arg_list):
+                if verbosity > 0 and out:
+                    print(out, file=print_dest, flush=True)
 
 
 def output_reads(reads, out_format, output, read_type, verbosity, min_split_read_size, print_dest):

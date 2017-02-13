@@ -33,6 +33,7 @@ class NanoporeRead(object):
 
         self.middle_adapter_positions = set()
         self.middle_trim_positions = set()
+        self.middle_hit_str = ''
 
     def get_seq_with_start_end_adapters_trimmed(self):
         if not self.start_trim_amount and not self.end_trim_amount:
@@ -111,34 +112,36 @@ class NanoporeRead(object):
                                        scoring_scheme_vals)
         adapter_set.best_end_score = max(adapter_set.best_end_score, score)
 
-    def find_start_trim(self, adapter_set, end_size, extra_trim_size, end_threshold,
+    def find_start_trim(self, adapters, end_size, extra_trim_size, end_threshold,
                         scoring_scheme_vals, min_trim_size):
         """
-        Aligns an adapter sequence and possibly adjusts the read's start trim amount based on the
-        result.
+        Aligns one or more adapter sequences and possibly adjusts the read's start trim amount based
+        on the result.
         """
         read_seq_start = self.seq[:end_size]
-        _, score, read_start, read_end = align_adapter(read_seq_start,
-                                                       adapter_set.start_sequence[1],
-                                                       scoring_scheme_vals)
-        if score > end_threshold and read_end != end_size and \
-                read_end - read_start >= min_trim_size:
-            trim_amount = read_end + extra_trim_size
-            self.start_trim_amount = max(self.start_trim_amount, trim_amount)
+        for adapter in adapters:
+            _, score, read_start, read_end = align_adapter(read_seq_start,
+                                                           adapter.start_sequence[1],
+                                                           scoring_scheme_vals)
+            if score > end_threshold and read_end != end_size and \
+                    read_end - read_start >= min_trim_size:
+                trim_amount = read_end + extra_trim_size
+                self.start_trim_amount = max(self.start_trim_amount, trim_amount)
 
-    def find_end_trim(self, adapter_set, end_size, extra_trim_size, end_threshold,
+    def find_end_trim(self, adapters, end_size, extra_trim_size, end_threshold,
                       scoring_scheme_vals, min_trim_size):
         """
-        Aligns an adapter sequence and possibly adjusts the read's end trim amount based on the
-        result.
+        Aligns one or more adapter sequences and possibly adjusts the read's end trim amount based
+        on the result.
         """
         read_seq_end = self.seq[-end_size:]
-        _, score, read_start, read_end = align_adapter(read_seq_end, adapter_set.end_sequence[1],
-                                                       scoring_scheme_vals)
-        if score > end_threshold and read_start != 0 and \
-                read_end - read_start >= min_trim_size:
-            trim_amount = (end_size - read_start) + extra_trim_size
-            self.end_trim_amount = max(self.end_trim_amount, trim_amount)
+        for adapter in adapters:
+            _, score, read_start, read_end = align_adapter(read_seq_end, adapter.end_sequence[1],
+                                                           scoring_scheme_vals)
+            if score > end_threshold and read_start != 0 and \
+                    read_end - read_start >= min_trim_size:
+                trim_amount = (end_size - read_start) + extra_trim_size
+                self.end_trim_amount = max(self.end_trim_amount, trim_amount)
 
     def find_middle_adapters(self, adapters, middle_threshold, extra_middle_trim_good_side,
                              extra_middle_trim_bad_side, scoring_scheme_vals,
@@ -147,7 +150,6 @@ class NanoporeRead(object):
         Aligns an adapter sequence to the whole read to find places where the read should be split.
         """
         masked_seq = self.get_seq_with_start_end_adapters_trimmed()
-        hit_str = ''
         for adapter_name, adapter_seq in adapters:
 
             # We keep aligning adapters as long we get strong hits, so we can find multiple
@@ -160,8 +162,8 @@ class NanoporeRead(object):
                         masked_seq[read_end:]
                     self.middle_adapter_positions.update(range(read_start, read_end))
 
-                    hit_str += '  found ' + adapter_name + ' (pos ' + str(read_start) + '-' + \
-                               str(read_end) + ')\n'
+                    self.middle_hit_str += '  found ' + adapter_name + ' (read coords ' + \
+                                           str(read_start) + '-' + str(read_end) + ')\n'
 
                     trim_start = read_start - extra_middle_trim_good_side
                     if adapter_name in start_sequence_names:
@@ -174,9 +176,8 @@ class NanoporeRead(object):
                     self.middle_trim_positions.update(range(trim_start, trim_end))
                 else:
                     break
-        return hit_str
 
-    def get_formatted_start_seq(self, end_size, extra_trim_size):
+    def formatted_start_seq(self, end_size, extra_trim_size):
         """
         Returns the start of the read sequence, with any found adapters highlighted in red.
         """
@@ -191,7 +192,7 @@ class NanoporeRead(object):
         formatted_str += start_seq[red_bases+2:]
         return formatted_str
 
-    def get_formatted_end_seq(self, end_size, extra_trim_size):
+    def formatted_end_seq(self, end_size, extra_trim_size):
         """
         Returns the end of the read sequence, with any found adapters highlighted in red.
         """
@@ -206,7 +207,11 @@ class NanoporeRead(object):
         formatted_str = end_seq[:-(red_bases+2)] + formatted_str
         return formatted_str
 
-    def get_formatted_middle_seq(self):
+    def formatted_start_and_end_seq(self, end_size, extra_trim_size):
+        return self.formatted_start_seq(end_size, extra_trim_size) + '...' + \
+               self.formatted_end_seq(end_size, extra_trim_size)
+
+    def formatted_middle_seq(self):
         """
         If a middle adapter was found, this returns the relevant part of the read sequence, with
         the adapter highlighted in red.
@@ -243,6 +248,14 @@ class NanoporeRead(object):
         formatted_str += '' if range_end == len(trimmed_seq) \
             else '...(' + str(len(trimmed_seq) - range_end) + ' bp)'
         return formatted_str
+
+    def middle_adapter_results(self, verbosity):
+        if not self.middle_adapter_positions:
+            return ''
+        results = self.name + '\n' + self.middle_hit_str
+        if verbosity > 1:
+            results += self.formatted_middle_seq() + '\n'
+        return results
 
 
 def align_adapter(read_seq, adapter_seq, scoring_scheme_vals):
