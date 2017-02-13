@@ -240,7 +240,7 @@ def output_reads(reads, out_format, output, read_type, verbosity, min_split_read
         for read in reads:
             read_str = read.get_fasta(min_split_read_size) if out_format == 'fasta' \
                 else read.get_fastq(min_split_read_size)
-            print(read_str, end='', file=print_dest)
+            print(read_str, end='')
 
     else:  # output to file
         gzipped_out = output.endswith('.gz')
