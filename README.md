@@ -1,8 +1,6 @@
 # Porechop
 
-Porechop is a tool for finding and removing adapters from Oxford Nanopore reads. Adapters on the ends of reads are trimmed off. When a read has an adapter in its middle, it is treated as chimeric and chopped into two separate reads.
-
-Porechop performs thorough alignment to effectively find adapter sequences, even at low sequence identity.
+Porechop is a tool for finding and removing adapters from Oxford Nanopore reads. Adapters on the ends of reads are trimmed off. When a read has an adapter in its middle, it is treated as chimeric and chopped into two separate reads. Porechop performs thorough alignments to effectively find adapter sequences, even at low sequence identity.
 
 
 
@@ -16,7 +14,7 @@ Porechop performs thorough alignment to effectively find adapter sequences, even
 * [How it works](#how-it-works)
     * [Find matching adapter sets](#find-matching-adapter-sets)
     * [Trim adapters from read ends](#trim-adapters-from-read-ends)
-    * [Split read with internal adapters](#split-read-with-internal-adapters)
+    * [Split reads with internal adapters](#split-reads-with-internal-adapters)
 * [Full usage](#full-usage)
 * [Acknowledgements](#acknowledgements)
 * [License](#license)
@@ -101,7 +99,7 @@ The first and last bases in each read (default 100 bases, change with `--end_siz
 The default `--end_threshold` is low (50%) because false positives (trimming off a bit of sequence that wasn't really an adapter) shouldn't be too much of a problem with long reads (only a tiny fraction of the read is lost).
 
 
-### Split read with internal adapters
+### Split reads with internal adapters
 
 The entirety of each read is aligned to the present adapter sets to spot cases where an adapter is in the middle of the read, indicating a chimera. When a strong enough match is found (default 70%, change with `--middle_threshold`), the read is split. If the resulting parts are too short (default less than 1000 bp, change with `--min_split_read_size`), they are discarded.
 
@@ -114,49 +112,72 @@ Extra bases are also removed next to the hit, and how many depends on the side o
 # Full usage
 
 ```
-usage: porechop-runner.py [-h] -i INPUT [-o OUTPUT] [--format {auto,fasta,fastq}] [-v VERBOSITY] [-t THREADS] [--version] [--adapter_threshold ADAPTER_THRESHOLD] [--check_reads CHECK_READS] [--scoring_scheme SCORING_SCHEME]
-                          [--end_size END_SIZE] [--min_trim_size MIN_TRIM_SIZE] [--extra_end_trim EXTRA_END_TRIM] [--end_threshold END_THRESHOLD] [--middle_threshold MIDDLE_THRESHOLD]
-                          [--extra_middle_trim_good_side EXTRA_MIDDLE_TRIM_GOOD_SIDE] [--extra_middle_trim_bad_side EXTRA_MIDDLE_TRIM_BAD_SIDE] [--min_split_read_size MIN_SPLIT_READ_SIZE]
+usage: porechop-runner.py [-h] -i INPUT [-o OUTPUT] [--format {auto,fasta,fastq}] [-v VERBOSITY]
+                          [-t THREADS] [--version] [--adapter_threshold ADAPTER_THRESHOLD]
+                          [--check_reads CHECK_READS] [--scoring_scheme SCORING_SCHEME]
+                          [--end_size END_SIZE] [--min_trim_size MIN_TRIM_SIZE]
+                          [--extra_end_trim EXTRA_END_TRIM] [--end_threshold END_THRESHOLD]
+                          [--middle_threshold MIDDLE_THRESHOLD]
+                          [--extra_middle_trim_good_side EXTRA_MIDDLE_TRIM_GOOD_SIDE]
+                          [--extra_middle_trim_bad_side EXTRA_MIDDLE_TRIM_BAD_SIDE]
+                          [--min_split_read_size MIN_SPLIT_READ_SIZE]
 
-Porechop: a tool for finding adapters in Oxford Nanopore reads, trimming them from the ends and splitting reads with internal adapters
+Porechop: a tool for finding adapters in Oxford Nanopore reads, trimming them from the ends and splitting
+reads with internal adapters
 
 optional arguments:
-  -h, --help                            show this help message and exit
+  -h, --help                        show this help message and exit
 
 Main options:
-  -i INPUT, --input INPUT               FASTA or FASTQ of input reads (required)
-  -o OUTPUT, --output OUTPUT            Filename for FASTA or FASTQ of trimmed reads (if not set, trimmed reads will be printed to stdout)
-  --format {auto,fasta,fastq}           Output format for the reads - if auto, the format will be chosen based on the output filename or the input read format (default: auto)
-  -v VERBOSITY, --verbosity VERBOSITY   Level of progress information: 0 = none, 1 = some, 2 = full - output will go to stdout if reads are saved to a file and stderr if reads are printed to stdout (default: 1)
-  -t THREADS, --threads THREADS         Number of threads to use for adapter alignment (default: 8)
-  --version                             show program's version number and exit
+  -i INPUT, --input INPUT           FASTA or FASTQ of input reads (required)
+  -o OUTPUT, --output OUTPUT        Filename for FASTA or FASTQ of trimmed reads (if not set, trimmed reads
+                                    will be printed to stdout)
+  --format {auto,fasta,fastq}       Output format for the reads - if auto, the format will be chosen based
+                                    on the output filename or the input read format (default: auto)
+  -v VERBOSITY, --verbosity VERBOSITY
+                                    Level of progress information: 0 = none, 1 = some, 2 = full - output
+                                    will go to stdout if reads are saved to a file and stderr if reads are
+                                    printed to stdout (default: 1)
+  -t THREADS, --threads THREADS     Number of threads to use for adapter alignment (default: 8)
+  --version                         show program's version number and exit
 
 Adapter search settings:
   Control how the program determines which adapter sets are present
 
   --adapter_threshold ADAPTER_THRESHOLD
-                                        An adapter set has to score at least this well to be labelled as present and trimmed off (0.0 to 1.0) (default: 0.8)
-  --check_reads CHECK_READS             This many reads will be aligned to all possible adapters to determine which adapter sets are present (default: 1000)
-  --scoring_scheme SCORING_SCHEME       Comma-delimited string of alignment scores: match,mismatch, gap open, gap extend (default: 3,-6,-5,-2)
+                                    An adapter set has to score at least this well to be labelled as
+                                    present and trimmed off (0.0 to 1.0) (default: 0.8)
+  --check_reads CHECK_READS         This many reads will be aligned to all possible adapters to determine
+                                    which adapter sets are present (default: 1000)
+  --scoring_scheme SCORING_SCHEME   Comma-delimited string of alignment scores: match,mismatch, gap open,
+                                    gap extend (default: 3,-6,-5,-2)
 
 End adapter settings:
   Control the trimming of adapters from read ends
 
-  --end_size END_SIZE                   The number of base pairs at each end of the read which will be searched for adapter sequences (default: 100)
-  --min_trim_size MIN_TRIM_SIZE         Adapter alignments smaller than this will be ignored (default: 4)
-  --extra_end_trim EXTRA_END_TRIM       This many additional bases will be removed next to adapters found at the ends of reads (default: 2)
-  --end_threshold END_THRESHOLD         Adapters at the ends of reads must score at least this well to be removed (0.0 to 1.0) (default: 0.5)
+  --end_size END_SIZE               The number of base pairs at each end of the read which will be searched
+                                    for adapter sequences (default: 100)
+  --min_trim_size MIN_TRIM_SIZE     Adapter alignments smaller than this will be ignored (default: 4)
+  --extra_end_trim EXTRA_END_TRIM   This many additional bases will be removed next to adapters found at
+                                    the ends of reads (default: 2)
+  --end_threshold END_THRESHOLD     Adapters at the ends of reads must score at least this well to be
+                                    removed (0.0 to 1.0) (default: 0.5)
 
 Middle adapter settings:
   Control the splitting of read from middle adapters
 
-  --middle_threshold MIDDLE_THRESHOLD   Adapters in the middle of reads must score at least this well to be removed and split the read (0.0 to 1.0) (default: 0.7)
+  --middle_threshold MIDDLE_THRESHOLD
+                                    Adapters in the middle of reads must score at least this well to be
+                                    removed and split the read (0.0 to 1.0) (default: 0.7)
   --extra_middle_trim_good_side EXTRA_MIDDLE_TRIM_GOOD_SIDE
-                                        This many additional bases will be removed next to middle adapters on their "good" side (default: 10)
+                                    This many additional bases will be removed next to middle adapters on
+                                    their "good" side (default: 10)
   --extra_middle_trim_bad_side EXTRA_MIDDLE_TRIM_BAD_SIDE
-                                        This many additional bases will be removed next to middle adapters on their "bad" side (default: 100)
+                                    This many additional bases will be removed next to middle adapters on
+                                    their "bad" side (default: 100)
   --min_split_read_size MIN_SPLIT_READ_SIZE
-                                        Post-split read pieces smaller than this many base pairs will not be outputted (default: 1000)
+                                    Post-split read pieces smaller than this many base pairs will not be
+                                    outputted (default: 1000)
 ```
 
 
