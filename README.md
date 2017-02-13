@@ -1,7 +1,17 @@
 # Porechop
 
-Porechop is a tool for finding adapters in Oxford Nanopore reads, trimming them from the ends and splitting reads with internal adapters.
+Porechop is a tool for finding and removing adapters in Oxford Nanopore reads.  Adapters on the starts and ends of reads are trimmed off. When an adapter is found in the middle of a read, it is treated as chimeric and chopped into two separate reads.
 
+Porechop performs thorough alignment of the adapter sequences to effectively find them, even at low sequence identity.
+
+
+
+# Requirements
+
+* Linux or macOS
+* [Python](https://www.python.org/) 3.4 or later
+* C++ compiler
+    * Recent versions of [GCC](https://gcc.gnu.org/), [Clang](http://clang.llvm.org/) and [ICC](https://software.intel.com/en-us/c-compilers) should all work (C++14 support is required).
 
 
 #  Installation
@@ -42,7 +52,7 @@ Now instead of running `porechop`, you instead use `path/to/porechop-runner.py`.
 __All you really need to know:__<br>
 `porechop -i input_reads.fastq.gz -o output_reads.fastq.gz`
 
-__Output reads to stdout, if you prefer:__<br>
+__Trimmed reads to stdout, if you prefer:__<br>
 `porechop -i input_reads.fastq.gz > output_reads.fastq`
 
 __Also works with FASTA:__<br>
@@ -51,12 +61,33 @@ __Also works with FASTA:__<br>
 __More verbose output:__<br>
 `porechop -i input_reads.fastq.gz -o output_reads.fastq.gz --verbosity 2`
 
-__Got a big server?:__<br>
-`porechop -i input_reads.fastq.gz -o output_reads.fastq.gz --threads 80`
+__Got a big server?__<br>
+`porechop -i input_reads.fastq.gz -o output_reads.fastq.gz --threads 100`
+
+
+
+# How it works
+
+### Find matching adapter sets
+ 
+Porechop first tries aligning a subset of reads (default 1000 reads, change with `--check_reads`) to all known adapter sets. Adapter sets with high scoring hits (default 80%, change with `--adapter_threshold`) are deemed present in the sample.
+
+The [alignment scoring scheme](http://seqan.readthedocs.io/en/master/Tutorial/DataStructures/Alignment/ScoringSchemes.html) used in this and subsequent alignments can be modified using the `--scoring_scheme` option (default: match = 3, mismatch = -6, gap open = -5, gap extend = -2).
+
+### Trim adapters from read ends
+
+The first handful of bases in each read (default 100 bp, change with `--end_size`) are aligned to each present adapter set. When a long enough (default 4, change with `--min_trim_size`) and strong enough (default 50%, change with `--end_threshold`) match is found, the read is trimmed. A few extra bases (default 2, change with `--extra_end_trim`) past the adapter match are removed as well to ensure it's all removed.
+
+### Split read with internal adapters
+
+The entirety of each read is aligned to the present adapter sets to spot cases where an adapter is in the middle of the read, indicating a chimera. When a strong enough match is found (default 70%, change with `--middle_threshold`), the read is split. If the resulting parts are too short (default less than 1000 bp, change with `--min_split_read_size`), they are discarded.
+
+Extra bases are removed next to the hit - how many depends on which side of the adapter. If we find an adapter that's expected at the start of a read, it's likely that what follows is good sequence but what precedes it may not be. Therefore, a few bases are trimmed after the adapter (default 10, change with `--extra_middle_trim_good_side`) and more bases are trimmed before the adapter (default 100, change with `--extra_middle_trim_bad_side`). If the found adapter is one we'd expect at the end of the read, then the "good side" is before the adapter and the "bad side" is after the adapter.
 
 
 
 # Full usage
+
 ```
 usage: porechop-runner.py [-h] -i INPUT [-o OUTPUT] [--format {auto,fasta,fastq}] [-v VERBOSITY] [-t THREADS] [--version] [--adapter_threshold ADAPTER_THRESHOLD] [--check_reads CHECK_READS] [--scoring_scheme SCORING_SCHEME]
                           [--end_size END_SIZE] [--min_trim_size MIN_TRIM_SIZE] [--extra_end_trim EXTRA_END_TRIM] [--end_threshold END_THRESHOLD] [--middle_threshold MIDDLE_THRESHOLD]
@@ -109,6 +140,7 @@ Middle adapter settings:
 
 Porechop was inspired by (and largely coded during) [Porecamp Australia 2017](https://porecamp-au.github.io/). Many thanks to the organisers and attendees, who helped me realise that a Nanopore adapter trimmer might be a useful tool!
 
+Also, many thanks to the [Seqan](https://www.seqan.de/) developers (Porechop uses Seqan to perform its alignments).
 
 
 # License
