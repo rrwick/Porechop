@@ -19,6 +19,7 @@ import argparse
 import os
 import sys
 import subprocess
+import multiprocessing
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, check_file_exists
 from .adapters import ADAPTERS
 from .nanopore_read import NanoporeRead
@@ -31,7 +32,7 @@ def main():
 
     matching_sets = find_matching_adapter_sets(reads, args.verbosity, args.end_size,
                                                args.scoring_scheme_vals, args.print_dest,
-                                               args.adapter_threshold)
+                                               args.adapter_threshold, args.check_reads)
 
     display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
 
@@ -57,6 +58,8 @@ def get_arguments():
     """
     Parse the command line arguments.
     """
+    default_threads = min(multiprocessing.cpu_count(), 16)
+
     parser = argparse.ArgumentParser(description='Porechop: a tool for finding adapters in Oxford '
                                                  'Nanopore reads, trimming them from the ends and '
                                                  'splitting reads with internal adapters')
@@ -74,6 +77,10 @@ def get_arguments():
                             help='Level of progress information: 0 = none, 1 = some, 2 = full '
                                  '(default: 1) - info will be sent to stdout if reads are saved to '
                                  'a file and stderr if reads are printed to stdout')
+    main_group.add_argument('-t', '--threads', type=int, default=default_threads,
+                            help='Number of threads to use for adapter alignment (default: ' +
+                                 str(default_threads) + ')')
+
     main_group.add_argument('--version', action='version', version=__version__)
 
     adapter_search_group = parser.add_argument_group('Adapter search settings',
@@ -83,6 +90,9 @@ def get_arguments():
                                       help='An adapter set has to score at least this well to be '
                                            'labelled as present and trimmed off (0.0 to 1.0, '
                                            'default: 0.8)')
+    adapter_search_group.add_argument('--check_reads', type=int, default=1000,
+                                      help='This many reads will be aligned to all possible '
+                                           'adapters to determine which adapter sets are present')
     adapter_search_group.add_argument('--scoring_scheme', type=str, default='3,-6,-5,-2',
                                       help='Comma-delimited string of alignment scores: match,'
                                            'mismatch, gap open, gap extend (default: "3,-6,-5,-2"')
@@ -150,13 +160,13 @@ def load_reads(input_filename, verbosity, print_dest):
 
 
 def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, print_dest,
-                               adapter_threshold):
+                               adapter_threshold, check_reads):
     """
     Aligns all of the adapter sets to the start/end of reads to see which (if any) matches best.
     """
     if verbosity > 0:
         print(bold_underline('Looking for known adapter sets'), flush=True, file=print_dest)
-    for read in reads:
+    for read in reads[:check_reads]:
         for adapter_set in ADAPTERS:
             read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
     return [x for x in ADAPTERS if x.best_start_or_end_score() >= adapter_threshold]
