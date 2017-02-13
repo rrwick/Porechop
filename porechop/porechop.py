@@ -20,6 +20,7 @@ import os
 import sys
 import subprocess
 import multiprocessing
+from multiprocessing.dummy import Pool as ThreadPool
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, check_file_exists
 from .adapters import ADAPTERS
 from .nanopore_read import NanoporeRead
@@ -32,7 +33,8 @@ def main():
 
     matching_sets = find_matching_adapter_sets(reads, args.verbosity, args.end_size,
                                                args.scoring_scheme_vals, args.print_dest,
-                                               args.adapter_threshold, args.check_reads)
+                                               args.adapter_threshold, args.check_reads,
+                                               args.threads)
 
     display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
 
@@ -42,7 +44,7 @@ def main():
 
     find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
                                args.extra_end_trim, args.end_threshold, args.scoring_scheme_vals,
-                               args.print_dest, args.min_trim_size)
+                               args.print_dest, args.min_trim_size, args.threads)
 
     display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
 
@@ -144,6 +146,9 @@ def get_arguments():
     else:
         args.print_dest = sys.stdout
 
+    if args.threads < 1:
+        sys.exit('Error: at least one thread required')
+
     return args
 
 
@@ -173,7 +178,15 @@ def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, 
             for adapter_set in ADAPTERS:
                 read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
     else:
-        pass
+        def align_adapter_set_one_arg(all_args):
+            read, adapter_set, end_size, scoring_scheme_vals = all_args
+            read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
+        with ThreadPool(threads) as pool:
+            arg_list = []
+            for read in read_subset:
+                for adapter_set in ADAPTERS:
+                    arg_list.append((read, adapter_set, end_size, scoring_scheme_vals))
+            pool.map(align_adapter_set_one_arg, arg_list)
     return [x for x in ADAPTERS if x.best_start_or_end_score() >= adapter_threshold]
 
 
@@ -195,7 +208,8 @@ def display_adapter_set_results(matching_sets, verbosity, print_dest):
 
 
 def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_trim_size,
-                               end_threshold, scoring_scheme_vals, print_dest, min_trim_size):
+                               end_threshold, scoring_scheme_vals, print_dest, min_trim_size,
+                               threads):
     if verbosity > 0:
         matching_set_names = ', '.join([x.name for x in matching_sets])
         print(bold_underline('Trimming ' + matching_set_names + ' adapters from read ends'),
