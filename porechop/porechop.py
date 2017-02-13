@@ -160,15 +160,20 @@ def load_reads(input_filename, verbosity, print_dest):
 
 
 def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, print_dest,
-                               adapter_threshold, check_reads):
+                               adapter_threshold, check_reads, threads):
     """
     Aligns all of the adapter sets to the start/end of reads to see which (if any) matches best.
     """
     if verbosity > 0:
         print(bold_underline('Looking for known adapter sets'), flush=True, file=print_dest)
-    for read in reads[:check_reads]:
-        for adapter_set in ADAPTERS:
-            read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
+
+    read_subset = reads[:check_reads]
+    if threads == 1:
+        for read in read_subset:
+            for adapter_set in ADAPTERS:
+                read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
+    else:
+        pass
     return [x for x in ADAPTERS if x.best_start_or_end_score() >= adapter_threshold]
 
 
