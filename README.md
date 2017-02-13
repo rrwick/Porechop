@@ -109,6 +109,19 @@ Extra bases are also removed next to the hit, and how many depends on the side o
 
 
 
+# Verbose output
+
+If you call Porechop with `--verbosity 2`, then it will display the start/end of each read and use ANSI colours to show the trimming. Red indicates the adapter sequence and yellow indicates additional trimmed bases:
+
+<p align="center"><img src="misc/end_trimming.png" alt="End trimming"></p>
+
+
+The same colour scheme is used for middle adapters, but only reads with a positive hit are displayed:
+
+<p align="center"><img src="misc/middle_adapters.png" alt="Middle adapters"></p>
+
+
+
 # Full usage
 
 ```
