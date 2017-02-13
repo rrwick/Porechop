@@ -1,8 +1,25 @@
 # Porechop
 
-Porechop is a tool for finding and removing adapters in Oxford Nanopore reads.  Adapters on the starts and ends of reads are trimmed off. When an adapter is found in the middle of a read, it is treated as chimeric and chopped into two separate reads.
+Porechop is a tool for finding and removing adapters from Oxford Nanopore reads. Adapters on the ends of reads are trimmed off. When a read has an adapter in its middle, it is treated as chimeric and chopped into two separate reads.
 
-Porechop performs thorough alignment of the adapter sequences to effectively find them, even at low sequence identity.
+Porechop performs thorough alignment to effectively find adapter sequences, even at low sequence identity.
+
+
+
+# Table of contents
+
+   * [Requirements](#requirements)
+   * [Installation](#installation)
+         * [Install from source](#install-from-source)
+         * [Build and run without installation](#build-and-run-without-installation)
+   * [Quick usage](#quick-usage)
+   * [How it works](#how-it-works)
+         * [Find matching adapter sets](#find-matching-adapter-sets)
+         * [Trim adapters from read ends](#trim-adapters-from-read-ends)
+         * [Split read with internal adapters](#split-read-with-internal-adapters)
+   * [Full usage](#full-usage)
+   * [Acknowledgements](#acknowledgements)
+   * [License](#license)
 
 
 
@@ -13,10 +30,13 @@ Porechop performs thorough alignment of the adapter sequences to effectively fin
 * C++ compiler
     * Recent versions of [GCC](https://gcc.gnu.org/), [Clang](http://clang.llvm.org/) and [ICC](https://software.intel.com/en-us/c-compilers) should all work (C++14 support is required).
 
+I haven't tried to make Porechop run on Windows, but it should be possible. If you have any success on this front, let me know and I'll add instructions to this README!
+
 
 #  Installation
 
 ### Install from source
+
 ```bash
 git clone https://github.com/rrwick/Porechop.git
 cd Porechop
@@ -32,7 +52,6 @@ Notes:
 * Install to a specific location: `python3 setup.py install --prefix=$HOME/.local`
 * Install with pip (local copy): `pip3 install path/to/Porechop`
 * Install with pip (from GitHub): `pip3 install git+https://github.com/rrwick/Porechop.git`
-* Install with specific Makefile options: `python3 setup.py install --makeargs "CXX=icpc"`
 
 
 ### Build and run without installation
@@ -70,19 +89,25 @@ __Got a big server?__<br>
 
 ### Find matching adapter sets
  
-Porechop first tries aligning a subset of reads (default 1000 reads, change with `--check_reads`) to all known adapter sets. Adapter sets with high scoring hits (default 80%, change with `--adapter_threshold`) are deemed present in the sample.
+Porechop first aligns a subset of reads (default 1000 reads, change with `--check_reads`) to all known adapter sets. Adapter sets with high scoring hits (default 80%, change with `--adapter_threshold`) are deemed present in the sample.
 
 The [alignment scoring scheme](http://seqan.readthedocs.io/en/master/Tutorial/DataStructures/Alignment/ScoringSchemes.html) used in this and subsequent alignments can be modified using the `--scoring_scheme` option (default: match = 3, mismatch = -6, gap open = -5, gap extend = -2).
 
+
 ### Trim adapters from read ends
 
-The first handful of bases in each read (default 100 bp, change with `--end_size`) are aligned to each present adapter set. When a long enough (default 4, change with `--min_trim_size`) and strong enough (default 50%, change with `--end_threshold`) match is found, the read is trimmed. A few extra bases (default 2, change with `--extra_end_trim`) past the adapter match are removed as well to ensure it's all removed.
+The first and last bases in each read (default 100 bases, change with `--end_size`) are aligned to each present adapter set. When a long enough (default 4, change with `--min_trim_size`) and strong enough (default 50%, change with `--end_threshold`) match is found, the read is trimmed. A few extra bases (default 2, change with `--extra_end_trim`) past the adapter match are removed as well to ensure it's all removed.
+
+The default `--end_threshold` is low (50%) because false positives (trimming off a bit of sequence that wasn't really an adapter) shouldn't be too much of a problem with long reads (only a tiny fraction of the read is lost).
+
 
 ### Split read with internal adapters
 
 The entirety of each read is aligned to the present adapter sets to spot cases where an adapter is in the middle of the read, indicating a chimera. When a strong enough match is found (default 70%, change with `--middle_threshold`), the read is split. If the resulting parts are too short (default less than 1000 bp, change with `--min_split_read_size`), they are discarded.
 
-Extra bases are removed next to the hit - how many depends on which side of the adapter. If we find an adapter that's expected at the start of a read, it's likely that what follows is good sequence but what precedes it may not be. Therefore, a few bases are trimmed after the adapter (default 10, change with `--extra_middle_trim_good_side`) and more bases are trimmed before the adapter (default 100, change with `--extra_middle_trim_bad_side`). If the found adapter is one we'd expect at the end of the read, then the "good side" is before the adapter and the "bad side" is after the adapter.
+The default `--middle_threshold` (70%) is higher than the default `--end_threshold` (50%) because false positives in this step (splitting a read that is not chimeric) could be more problematic than false positives in the end trimming step.
+
+Extra bases are also removed next to the hit, and how many depends on the side of the adapter. If we find an adapter that's expected at the start of a read, it's likely that what follows is good sequence but what precedes it may not be. Therefore, a few bases are trimmed after the adapter (default 10, change with `--extra_middle_trim_good_side`) and more bases are trimmed before the adapter (default 100, change with `--extra_middle_trim_bad_side`). If the found adapter is one we'd expect at the end of the read, then the "good side" is before the adapter and the "bad side" is after the adapter.
 
 
 
@@ -140,7 +165,8 @@ Middle adapter settings:
 
 Porechop was inspired by (and largely coded during) [Porecamp Australia 2017](https://porecamp-au.github.io/). Many thanks to the organisers and attendees, who helped me realise that a Nanopore adapter trimmer might be a useful tool!
 
-Also, many thanks to the [Seqan](https://www.seqan.de/) developers (Porechop uses Seqan to perform its alignments).
+Also, I'd like to thank the [SeqAn](https://www.seqan.de/) developers for their great library (Porechop uses SeqAn to perform its alignments).
+
 
 
 # License
