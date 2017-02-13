@@ -15,6 +15,7 @@ Porechop is a tool for finding and removing adapters from Oxford Nanopore reads.
     * [Find matching adapter sets](#find-matching-adapter-sets)
     * [Trim adapters from read ends](#trim-adapters-from-read-ends)
     * [Split reads with internal adapters](#split-reads-with-internal-adapters)
+* [Verbose output](#verbose-output)
 * [Full usage](#full-usage)
 * [Acknowledgements](#acknowledgements)
 * [License](#license)
