@@ -112,7 +112,7 @@ class NanoporeRead(object):
         adapter_set.best_end_score = max(adapter_set.best_end_score, score)
 
     def find_start_trim(self, adapter_set, end_size, extra_trim_size, end_threshold,
-                        scoring_scheme_vals):
+                        scoring_scheme_vals, min_trim_size):
         """
         Aligns an adapter sequence and possibly adjusts the read's start trim amount based on the
         result.
@@ -121,20 +121,22 @@ class NanoporeRead(object):
         _, score, read_start, read_end = align_adapter(read_seq_start,
                                                        adapter_set.start_sequence[1],
                                                        scoring_scheme_vals)
-        if score > end_threshold and read_end != end_size:
+        if score > end_threshold and read_end != end_size and \
+                read_end - read_start >= min_trim_size:
             trim_amount = read_end + extra_trim_size
             self.start_trim_amount = max(self.start_trim_amount, trim_amount)
 
     def find_end_trim(self, adapter_set, end_size, extra_trim_size, end_threshold,
-                      scoring_scheme_vals):
+                      scoring_scheme_vals, min_trim_size):
         """
         Aligns an adapter sequence and possibly adjusts the read's end trim amount based on the
         result.
         """
         read_seq_end = self.seq[-end_size:]
-        _, score, read_start, _ = align_adapter(read_seq_end, adapter_set.end_sequence[1],
-                                                scoring_scheme_vals)
-        if score > end_threshold and read_start != 0:
+        _, score, read_start, read_end = align_adapter(read_seq_end, adapter_set.end_sequence[1],
+                                                       scoring_scheme_vals)
+        if score > end_threshold and read_start != 0 and \
+                read_end - read_start >= min_trim_size:
             trim_amount = (end_size - read_start) + extra_trim_size
             self.end_trim_amount = max(self.end_trim_amount, trim_amount)
 

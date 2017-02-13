@@ -41,7 +41,7 @@ def main():
 
     find_adapters_at_read_ends(reads, best_adapter, args.verbosity, args.end_size,
                                args.extra_end_trim, args.end_threshold, args.scoring_scheme_vals,
-                               args.print_dest)
+                               args.print_dest, args.min_trim_size)
 
     display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
 
@@ -92,6 +92,9 @@ def get_arguments():
     end_trim_group.add_argument('--end_size', type=int, default=60,
                                 help='The number of base pairs at each end of the read which will '
                                      'be searched for adapter sequences')
+    end_trim_group.add_argument('--min_trim_size', type=int, default=4,
+                                help='Adapter alignments smaller than this will be ignored '
+                                     '(default: 4)')
     end_trim_group.add_argument('--extra_end_trim', type=int, default=2,
                                 help='This many additional bases will be removed next to adapters '
                                      'found at the ends of reads')
@@ -177,7 +180,7 @@ def display_adapter_set_results(best_adapter, verbosity, adapter_threshold, prin
 
 
 def find_adapters_at_read_ends(reads, best_adapter, verbosity, end_size, extra_trim_size,
-                               end_threshold, scoring_scheme_vals, print_dest):
+                               end_threshold, scoring_scheme_vals, print_dest, min_trim_size):
     if verbosity > 0:
         print(bold_underline('Trimming ' + best_adapter.name + ' adapters from read ends'),
               file=print_dest)
@@ -188,9 +191,9 @@ def find_adapters_at_read_ends(reads, best_adapter, verbosity, end_size, extra_t
               red(best_adapter.end_sequence[1]) + '\n', file=print_dest)
     for read in reads:
         read.find_start_trim(best_adapter, end_size, extra_trim_size, end_threshold,
-                             scoring_scheme_vals)
+                             scoring_scheme_vals, min_trim_size)
         read.find_end_trim(best_adapter, end_size, extra_trim_size, end_threshold,
-                           scoring_scheme_vals)
+                           scoring_scheme_vals, min_trim_size)
         if verbosity > 1:
             print(read.get_formatted_start_seq(end_size, extra_trim_size) + '...' +
                   read.get_formatted_end_seq(end_size, extra_trim_size), file=print_dest)
