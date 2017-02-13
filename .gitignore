@@ -30,3 +30,5 @@ setuptools*.zip
 
 # PyCharm
 .idea/
+
+gh-md-toc
