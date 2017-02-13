@@ -8,18 +8,18 @@ Porechop performs thorough alignment to effectively find adapter sequences, even
 
 # Table of contents
 
-   * [Requirements](#requirements)
-   * [Installation](#installation)
-         * [Install from source](#install-from-source)
-         * [Build and run without installation](#build-and-run-without-installation)
-   * [Quick usage](#quick-usage)
-   * [How it works](#how-it-works)
-         * [Find matching adapter sets](#find-matching-adapter-sets)
-         * [Trim adapters from read ends](#trim-adapters-from-read-ends)
-         * [Split read with internal adapters](#split-read-with-internal-adapters)
-   * [Full usage](#full-usage)
-   * [Acknowledgements](#acknowledgements)
-   * [License](#license)
+* [Requirements](#requirements)
+* [Installation](#installation)
+    * [Install from source](#install-from-source)
+    * [Build and run without installation](#build-and-run-without-installation)
+* [Quick usage](#quick-usage)
+* [How it works](#how-it-works)
+    * [Find matching adapter sets](#find-matching-adapter-sets)
+    * [Trim adapters from read ends](#trim-adapters-from-read-ends)
+    * [Split read with internal adapters](#split-read-with-internal-adapters)
+* [Full usage](#full-usage)
+* [Acknowledgements](#acknowledgements)
+* [License](#license)
 
 
 
