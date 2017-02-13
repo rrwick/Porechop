@@ -1,0 +1,32 @@
+# Mac stuff
+.DS_Store
+
+# C extensions
+*.so
+*.o
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Test sequences
+tests/*.fasta
+tests/*.fastq
+
+# Distribution and packaging
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+setuptools*.zip
+
+# PyCharm
+.idea/
