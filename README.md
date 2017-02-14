@@ -17,6 +17,7 @@ Porechop is a tool for finding and removing adapters from Oxford Nanopore reads.
     * [Split reads with internal adapters](#split-reads-with-internal-adapters)
     * [Output](#output)
     * [Verbose output](#verbose-output)
+* [Known adapters](#known-adapters)
 * [Full usage](#full-usage)
 * [Acknowledgements](#acknowledgements)
 * [License](#license)
@@ -141,6 +142,20 @@ If you call Porechop with `--verbosity 2`, then it will display the start/end of
 The same colour scheme is used for middle adapters, but only reads with a positive hit are displayed:
 
 <p align="center"><img src="misc/middle_adapters.png" alt="Middle adapters"></p>
+
+
+
+# Known adapters
+
+The known Nanopore adapters that Porechop looks for are defined in the [adapters.py](../blob/master/porechop/adapters.py) file.
+
+They are:
+* SQK-MAP006
+* SQK-NSK007
+* PCR barcoding
+* Native barcoding
+
+If you know of any I missed, please let me know and I'll add them!
 
 
 
