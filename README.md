@@ -1,6 +1,6 @@
 # Porechop
 
-Porechop is a tool for finding and removing adapters from Oxford Nanopore reads. Adapters on the ends of reads are trimmed off. When a read has an adapter in its middle, it is treated as chimeric and chopped into two separate reads. Porechop performs thorough alignments to effectively find adapter sequences, even at low sequence identity.
+Porechop is a tool for finding and removing adapters from Oxford Nanopore reads. Adapters on the ends of reads are trimmed off, and when a read has an adapter in its middle, it is treated as chimeric and chopped into two separate reads. Porechop performs thorough alignments to effectively find adapters, even at low sequence identity.
 
 
 
@@ -15,7 +15,8 @@ Porechop is a tool for finding and removing adapters from Oxford Nanopore reads.
     * [Find matching adapter sets](#find-matching-adapter-sets)
     * [Trim adapters from read ends](#trim-adapters-from-read-ends)
     * [Split reads with internal adapters](#split-reads-with-internal-adapters)
-* [Verbose output](#verbose-output)
+    * [Output](#output)
+    * [Verbose output](#verbose-output)
 * [Full usage](#full-usage)
 * [Acknowledgements](#acknowledgements)
 * [License](#license)
@@ -32,17 +33,18 @@ Porechop is a tool for finding and removing adapters from Oxford Nanopore reads.
 I haven't tried to make Porechop run on Windows, but it should be possible. If you have any success on this front, let me know and I'll add instructions to this README!
 
 
+
 #  Installation
 
 ### Install from source
+
+Running the `setup.py` script will compile the C++ components of Porechop and install a `porechop` executable:
 
 ```bash
 git clone https://github.com/rrwick/Porechop.git
 cd Porechop
 python3 setup.py install
 ```
-
-You should now be able to run Porechop by calling `porechop`.
 
 Notes:
 * If the last command complains about permissions, you may need to run it with `sudo`.
@@ -55,14 +57,13 @@ Notes:
 
 ### Build and run without installation
 
-This approach compiles Porechop code, but doesn't copy executables anywhere:
+By simply running `make` in Porechop's directory, you can compile the C++ components but not install an executables. The program can then be executed by directly calling the `porechop-runner.py` script.
+
 ```bash
 git clone https://github.com/rrwick/Porechop.git
 cd Porechop
 make
 ```
-Now instead of running `porechop`, you instead use `path/to/porechop-runner.py`.
-
 
 
 # Quick usage
@@ -88,7 +89,9 @@ __Got a big server?__<br>
 
 ### Find matching adapter sets
  
-Porechop first aligns a subset of reads (default 1000 reads, change with `--check_reads`) to all known adapter sets. Adapter sets with high identity hits (default 90%, change with `--adapter_threshold`) are deemed present in the sample.
+Porechop first aligns a subset of reads (default 1000 reads, change with `--check_reads`) to all known adapter sets. Adapter sets with at least one high identity match (default 90%, change with `--adapter_threshold`) are deemed present in the sample.
+
+Identity in this step is measured over the full length of the adapter. E.g. in order to qualify for a 90% match, an adapter could be present at 90% identity over its full length, or it could be present at 100% identity over 90% of its length, but a 90% identity match over 90% of the adapter length would not be sufficient.
 
 The [alignment scoring scheme](http://seqan.readthedocs.io/en/master/Tutorial/DataStructures/Alignment/ScoringSchemes.html) used in this and subsequent alignments can be modified using the `--scoring_scheme` option (default: match = 3, mismatch = -6, gap open = -5, gap extend = -2).
 
@@ -97,7 +100,9 @@ The [alignment scoring scheme](http://seqan.readthedocs.io/en/master/Tutorial/Da
 
 The first and last bases in each read (default 100 bases, change with `--end_size`) are aligned to each present adapter set. When a long enough (default 4, change with `--min_trim_size`) and strong enough (default 75%, change with `--end_threshold`) match is found, the read is trimmed. A few extra bases (default 2, change with `--extra_end_trim`) past the adapter match are removed as well to ensure it's all removed.
 
-The default `--end_threshold` is low (75%) because false positives (trimming off a bit of sequence that wasn't really an adapter) shouldn't be too much of a problem with long reads (only a tiny fraction of the read is lost).
+Identity in this step is measured over the aligned part of the adapter, not its full length. E.g. if the last 5 bases of an adapter exactly match the first 5 bases of a read, that counts as a 100% identity match.
+
+The default `--end_threshold` is low (75%) because false positives (trimming off some sequence that wasn't really an adapter) shouldn't be too much of a problem with long reads, as only a tiny fraction of the read is lost.
 
 
 ### Split reads with internal adapters
@@ -114,8 +119,19 @@ TGTTGTTGTTGTTATTGTTGTTATTGTTGTTGTATTGTTGTTATTGTTGTTGTTGTACATTGTTATTGTTGTATTGTTGT
 ```
 
 
+### Output
 
-# Verbose output
+If Porechop is run with the output file specified using `-o`, it will display progress info to stdout. It will try to deduce the format of the output reads using the output filename (can handle `.fastq`, `.fastq.gz`, `.fasta` and `.fasta.gz`). The `--format` option can be used to override this automatic detection.
+
+If Porechop is run without `-o`, then it will output the trimmed reads to stdout and print its progress info to stderr. The output format of the reads will be FASTA/FASTQ based on the input reads, or else can be specified using `--format`.
+
+Whether or not `-o` is used, the `--verbosity` option will change the output of progress info:
+* `--verbosity 0` gives no output.
+* `--verbosity 1` (the default) gives summary info about end adapter trimming and shows all instances of middle adapter splitting.
+* `--verbosity 2` is described below.
+
+
+### Verbose output
 
 If you call Porechop with `--verbosity 2`, then it will display the start/end of each read and use ANSI colours to show the trimming. Red indicates the adapter sequence and yellow indicates additional trimmed bases:
 
