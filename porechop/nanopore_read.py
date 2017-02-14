@@ -25,8 +25,8 @@ class NanoporeRead(object):
 
         self.seq = seq
         self.quals = quals
-        if not self.quals:
-            self.quals = '+' * len(seq)
+        if len(quals) < len(seq):
+            self.quals += '+' * (len(seq) - len(quals))
 
         self.start_trim_amount = 0
         self.end_trim_amount = 0
@@ -163,7 +163,8 @@ class NanoporeRead(object):
                     self.middle_adapter_positions.update(range(read_start, read_end))
 
                     self.middle_hit_str += '  found ' + adapter_name + ' (read coords ' + \
-                                           str(read_start) + '-' + str(read_end) + ')\n'
+                                           str(read_start) + '-' + str(read_end) + ',' + \
+                                           'score=' + str(score) + ')\n'
 
                     trim_start = read_start - extra_middle_trim_good_side
                     if adapter_name in start_sequence_names:
@@ -279,6 +280,7 @@ def align_adapter(read_seq, adapter_seq, scoring_scheme_vals):
         aligned_length_score = raw_score / (scoring_scheme_vals[0] * aligned_adapter_length)
     except ZeroDivisionError:
         aligned_length_score = 0
+
     return full_length_score, aligned_length_score, read_start, read_end
 
 

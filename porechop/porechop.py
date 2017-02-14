@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Copyright 2017 Ryan Wick (rrwick@gmail.com)
 https://github.com/rrwick/Porechop
@@ -343,7 +342,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, min_split_read
             out_filename = output
         with open(out_filename, 'wt') as out:
             for read in reads:
-                read_str = read.get_fasta() if out_format == 'fasta' else read.get_fastq()
+                read_str = read.get_fasta(min_split_read_size) if out_format == 'fasta' \
+                    else read.get_fastq(min_split_read_size)
                 out.write(read_str)
         if gzipped_out:
             subprocess.check_output('gzip -c ' + out_filename + ' > ' + output,

@@ -93,12 +93,18 @@ def get_sequence_file_type(filename):
     """
     Determines whether a file is FASTA or FASTQ.
     """
+    if not os.path.isfile(filename):
+        sys.exit('Error: could not find ' + filename)
     if get_compression_type(filename) == 'gz':
         open_func = gzip.open
     else:  # plain text
         open_func = open
-    seq_file = open_func(filename, 'rt')
-    first_char = seq_file.read(1)
+
+    with open_func(filename, 'rt') as seq_file:
+        try:
+            first_char = seq_file.read(1)
+        except UnicodeDecodeError:
+            first_char = ''
 
     if first_char == '>':
         return 'FASTA'
@@ -119,28 +125,31 @@ def load_fasta_or_fastq(filename):
         return load_fastq(filename), 'FASTQ'
 
 
-def load_fasta(filename):
+def load_fasta(fasta_filename):
     """
     Returns a list of tuples (header, seq) for each record in the fasta file.
     """
+    if get_compression_type(fasta_filename) == 'gz':
+        open_func = gzip.open
+    else:  # plain text
+        open_func = open
     fasta_seqs = []
-    fasta_file = open(filename, 'rt')
-    name = ''
-    sequence = ''
-    for line in fasta_file:
-        line = line.strip()
-        if not line:
-            continue
-        if line[0] == '>':  # Header line = start of new contig
-            if name:
-                fasta_seqs.append((name.split()[0], sequence, name))
-                sequence = ''
-            name = line[1:]
-        else:
-            sequence += line
-    if name:
-        fasta_seqs.append((name.split()[0], sequence, name))
-    fasta_file.close()
+    with open_func(fasta_filename, 'rt') as fasta_file:
+        name = ''
+        sequence = ''
+        for line in fasta_file:
+            line = line.strip()
+            if not line:
+                continue
+            if line[0] == '>':  # Header line = start of new contig
+                if name:
+                    fasta_seqs.append((name.split()[0], sequence, name))
+                    sequence = ''
+                name = line[1:]
+            else:
+                sequence += line
+        if name:
+            fasta_seqs.append((name.split()[0], sequence, name))
     return fasta_seqs
 
 
