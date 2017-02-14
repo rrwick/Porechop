@@ -38,19 +38,19 @@ def main():
 
     display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
 
-    if not matching_sets:
-        print('No strong adapter matches - not proceeding with trimming\n', file=args.print_dest)
-        sys.exit()
+    if matching_sets:
+        find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
+                                   args.extra_end_trim, args.end_threshold, args.scoring_scheme_vals,
+                                   args.print_dest, args.min_trim_size, args.threads)
 
-    find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
-                               args.extra_end_trim, args.end_threshold, args.scoring_scheme_vals,
-                               args.print_dest, args.min_trim_size, args.threads)
+        display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
 
-    display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
-
-    find_adapters_in_read_middles(reads, matching_sets, args.verbosity, args.middle_threshold,
-                                  args.extra_middle_trim_good_side, args.extra_middle_trim_bad_side,
-                                  args.scoring_scheme_vals, args.print_dest, args.threads)
+        find_adapters_in_read_middles(reads, matching_sets, args.verbosity, args.middle_threshold,
+                                      args.extra_middle_trim_good_side, args.extra_middle_trim_bad_side,
+                                      args.scoring_scheme_vals, args.print_dest, args.threads)
+    else:
+        print('No adapters found - output reads are unchanged from input reads\n',
+              file=args.print_dest)
 
     output_reads(reads, args.format, args.output, read_type, args.verbosity,
                  args.min_split_read_size, args.print_dest)
