@@ -1,5 +1,5 @@
 1 has no adapter
-2 starts with whole (28 bp) start adapter
+2 starts with whole (28 bp) start adapter (inexact match)
 3 ends with whole (22 bp) end adapter
 4 starts with 12 bp of start adapter and ends with 16 bp of end adapter
 5 has whole end adapter at position 3500

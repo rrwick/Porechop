@@ -1,0 +1,4 @@
+1 has no adapter
+2 starts with whole (28 bp) SQK-MAP006_Y_Top_SK63 (inexact match)
+3 starts with whole (28 bp) SQK-NSK007_Y_Top (exact match)
+4 has SQK-MAP006_Y_Bottom_SK64 (exact match) at position 2000 and SQK-NSK007_Y_Bottom (exact match) at position 5000
