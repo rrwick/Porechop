@@ -162,9 +162,9 @@ class NanoporeRead(object):
                         masked_seq[read_end:]
                     self.middle_adapter_positions.update(range(read_start, read_end))
 
-                    self.middle_hit_str += '  found ' + adapter_name + ' (read coords ' + \
-                                           str(read_start) + '-' + str(read_end) + ',' + \
-                                           'score=' + str(score) + ')\n'
+                    self.middle_hit_str += '  found ' + adapter_name + ' (read coords: ' + \
+                                           str(read_start) + '-' + str(read_end) + ', ' + \
+                                           'identity: ' + '%.1f' % score + '%)\n'
 
                     trim_start = read_start - extra_middle_trim_good_side
                     if adapter_name in start_sequence_names:
@@ -266,22 +266,13 @@ def align_adapter(read_seq, adapter_seq, scoring_scheme_vals):
 
     read_start = int(result_parts[0])
     read_end = int(result_parts[1]) + 1
-    adapter_start = int(result_parts[2])
-    adapter_end = int(result_parts[3]) + 1
-    raw_score = int(result_parts[4])
+    # adapter_start = int(result_parts[2])
+    # adapter_end = int(result_parts[3]) + 1
+    # raw_score = int(result_parts[4])
+    aligned_region_percent_identity = float(result_parts[5])
+    full_adapter_percent_identity = float(result_parts[6])
 
-    aligned_adapter_length = abs(adapter_end - adapter_start)
-
-    try:
-        full_length_score = raw_score / (scoring_scheme_vals[0] * len(adapter_seq))
-    except ZeroDivisionError:
-        full_length_score = 0
-    try:
-        aligned_length_score = raw_score / (scoring_scheme_vals[0] * aligned_adapter_length)
-    except ZeroDivisionError:
-        aligned_length_score = 0
-
-    return full_length_score, aligned_length_score, read_start, read_end
+    return full_adapter_percent_identity, aligned_region_percent_identity, read_start, read_end
 
 
 def add_number_to_read_name(read_name, number):

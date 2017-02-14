@@ -20,11 +20,10 @@ ScoredAlignment::ScoredAlignment(Align<Dna5String, ArrayGaps> & alignment,
     if (alignmentLength == 0)
         return;
 
-    int alignmentStartPos = -1;
-    int alignmentEndPos = -1;
 
     // We consider the alignment to have started when we've encountered a base in both
     // sequences (though not necessarily at the same time).
+    int alignmentStartPos = -1;
     bool readStarted = false;
     bool adapterStarted = false;
     for (int i = 0; i < alignmentLength; ++i) {
@@ -39,6 +38,7 @@ ScoredAlignment::ScoredAlignment(Align<Dna5String, ArrayGaps> & alignment,
     }
 
     // We use the same logic to see when the alignment has ended.
+    int alignmentEndPos = -1;
     bool readEnded = false;
     bool adapterEnded = false;
     for (int i = alignmentLength - 1; i >= 0; --i) {
@@ -54,6 +54,40 @@ ScoredAlignment::ScoredAlignment(Align<Dna5String, ArrayGaps> & alignment,
 
     if (alignmentStartPos == -1 || alignmentEndPos == -1)
         return;
+
+    // We also determine the start and end of the adapter in the alignment.
+    int adapterAlignmentStartPos = -1;
+    for (int i = 0; i < alignmentLength; ++i) {
+        if (adapterAlignment[i] != '-') {
+            adapterAlignmentStartPos = i;
+            break;
+        }
+    }
+    int adapterAlignmentEndPos = -1;
+    for (int i = alignmentLength - 1; i >= 0; --i) {
+        if (adapterAlignment[i] != '-') {
+            adapterAlignmentEndPos = i;
+            break;
+        }
+    }
+
+    // Now get the percent identity of the alignment using both the full alignment range and the
+    // adapter alignment range.
+    int alignedMatchCount = 0;
+    for (int i = alignmentStartPos; i < alignmentEndPos+1; ++i) {
+        if (adapterAlignment[i] == readAlignment[i])
+            ++alignedMatchCount;
+    }
+    int alignedRegionLength = alignmentEndPos - alignmentStartPos + 1;
+    m_alignedRegionPercentIdentity = 100.0 * alignedMatchCount / alignedRegionLength;
+
+    int fullAdapterMatchCount = 0;
+    for (int i = adapterAlignmentStartPos; i < adapterAlignmentEndPos+1; ++i) {
+        if (adapterAlignment[i] == readAlignment[i])
+            ++fullAdapterMatchCount;
+    }
+    int fullAdapterLength = adapterAlignmentEndPos - adapterAlignmentStartPos + 1;
+    m_fullAdapterPercentIdentity = 100.0 * fullAdapterMatchCount / fullAdapterLength;
 
     int readBases = 0, adapterBases = 0;
     for (int i = 0; i < alignmentLength; ++i) {
@@ -81,5 +115,7 @@ std::string ScoredAlignment::getString() {
            std::to_string(m_readEndPos) + "," + 
            std::to_string(m_adapterStartPos) + "," + 
            std::to_string(m_adapterEndPos) + "," + 
-           std::to_string(m_rawScore);
+           std::to_string(m_rawScore) + "," +
+           std::to_string(m_alignedRegionPercentIdentity) + "," +
+           std::to_string(m_fullAdapterPercentIdentity);
 }

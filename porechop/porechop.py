@@ -88,9 +88,10 @@ def get_arguments():
     adapter_search_group = parser.add_argument_group('Adapter search settings',
                                                      'Control how the program determines which '
                                                      'adapter sets are present')
-    adapter_search_group.add_argument('--adapter_threshold', type=float, default=0.8,
-                                      help='An adapter set has to score at least this well to be '
-                                           'labelled as present and trimmed off (0.0 to 1.0)')
+    adapter_search_group.add_argument('--adapter_threshold', type=float, default=90.0,
+                                      help='An adapter set has to have at least this percent '
+                                           'identity to be labelled as present and trimmed off '
+                                           '(0 to 100)')
     adapter_search_group.add_argument('--check_reads', type=int, default=1000,
                                       help='This many reads will be aligned to all possible '
                                            'adapters to determine which adapter sets are present')
@@ -108,16 +109,17 @@ def get_arguments():
     end_trim_group.add_argument('--extra_end_trim', type=int, default=2,
                                 help='This many additional bases will be removed next to adapters '
                                      'found at the ends of reads')
-    end_trim_group.add_argument('--end_threshold', type=float, default=0.5,
-                                help='Adapters at the ends of reads must score at least this well '
-                                     'to be removed (0.0 to 1.0)')
+    end_trim_group.add_argument('--end_threshold', type=float, default=75.0,
+                                help='Adapters at the ends of reads must have at least this '
+                                     'percent identity to be removed (0 to 100)')
 
     middle_trim_group = parser.add_argument_group('Middle adapter settings',
                                                   'Control the splitting of read from middle '
                                                   'adapters')
-    middle_trim_group.add_argument('--middle_threshold', type=float, default=0.7,
-                                   help='Adapters in the middle of reads must score at least this '
-                                        'well to be removed and split the read (0.0 to 1.0)')
+    middle_trim_group.add_argument('--middle_threshold', type=float, default=85.0,
+                                   help='Adapters in the middle of reads must have at least this '
+                                        'percent identity to be removed and split the read (0 to '
+                                        '100)')
     middle_trim_group.add_argument('--extra_middle_trim_good_side', type=int, default=10,
                                    help='This many additional bases will be removed next to '
                                         'middle adapters on their "good" side')
@@ -194,12 +196,12 @@ def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, 
 def display_adapter_set_results(matching_sets, verbosity, print_dest):
     if verbosity < 1:
         return
-    table = [['Set', 'Score']]
+    table = [['Set', 'Best %ID']]
     row_colours = {}
     matching_set_names = [x.name for x in matching_sets]
     for adapter_set in ADAPTERS:
-        score = adapter_set.best_start_or_end_score() * 100.0
-        score = '%.1f' % score + '%'
+        score = adapter_set.best_start_or_end_score()
+        score = '%.1f' % score
         table.append([adapter_set.name, score])
         if adapter_set.name in matching_set_names:
             row_colours[len(table) - 1] = 'green'

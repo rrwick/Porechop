@@ -23,6 +23,8 @@ public:
     int m_adapterStartPos;
     int m_adapterEndPos;
     int m_rawScore;
+    double m_alignedRegionPercentIdentity;
+    double m_fullAdapterPercentIdentity;
 };
 
 #endif // ALIGNMENT_H

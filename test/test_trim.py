@@ -337,7 +337,7 @@ class TestOneAdapterSet(unittest.TestCase):
         Read 6 has an inexact match for the start adapter, so increasing the middle_threshold
         option should prevent the split.
         """
-        self.run_command('porechop -i INPUT -o OUTPUT.fastq --middle_threshold 0.8')
+        self.run_command('porechop -i INPUT -o OUTPUT.fastq --middle_threshold 96')
         trimmed_reads, read_type = self.load_trimmed_reads()
         read_6_1 = [x for x in trimmed_reads if x[0] == '6_1'][0]
         read_6_2 = [x for x in trimmed_reads if x[0] == '6_2'][0]
@@ -345,7 +345,7 @@ class TestOneAdapterSet(unittest.TestCase):
         self.assertEqual(len(read_6_2[1]), 7962)
 
     def test_middle_threshold_2(self):
-        self.run_command('porechop -i INPUT -o OUTPUT.fastq --middle_threshold 0.9')
+        self.run_command('porechop -i INPUT -o OUTPUT.fastq --middle_threshold 97')
         trimmed_reads, read_type = self.load_trimmed_reads()
         read_6 = [x for x in trimmed_reads if x[0] == '6'][0]
         self.assertEqual(len(read_6[1]), 12000)
@@ -378,11 +378,11 @@ class TestOneAdapterSet(unittest.TestCase):
 
     def test_adapter_threshold_1(self):
         """
-        When only two reads are checked with an adapter threshold of 1.0, no adapters are found
+        When only two reads are checked with an adapter threshold of 100%, no adapters are found
         (because the adapter in read 2 is not an exact match).
         """
         out, _ = self.run_command('porechop -i INPUT -o OUTPUT.fastq --check_reads 2 '
-                                  '--adapter_threshold 1.0')
+                                  '--adapter_threshold 100')
         self.assertTrue('No adapters found' in out)
         trimmed_reads, read_type = self.load_trimmed_reads()
         read_2 = [x for x in trimmed_reads if x[0] == '2'][0]
@@ -390,10 +390,10 @@ class TestOneAdapterSet(unittest.TestCase):
 
     def test_adapter_threshold_2(self):
         """
-        When the adapter threshold is lowered to 0.8, Porechop finds the adapter in read 2..
+        When the adapter threshold is lowered to 90%, Porechop finds the adapter in read 2..
         """
         out, _ = self.run_command('porechop -i INPUT -o OUTPUT.fastq --check_reads 2 '
-                                  '--adapter_threshold 0.8')
+                                  '--adapter_threshold 90')
         self.assertTrue('No adapters found' not in out)
         trimmed_reads, read_type = self.load_trimmed_reads()
         read_2 = [x for x in trimmed_reads if x[0] == '2'][0]
