@@ -120,11 +120,11 @@ def get_arguments():
                                                   'Control the splitting of read from middle '
                                                   'adapters')
     middle_trim_group.add_argument('--discard_middle', action='store_true',
-                                   help='Reads with middle adapters will be discarded, not split')
+                                   help='Reads with middle adapters will be discarded (default: '
+                                        'reads with middle adapters are split)')
     middle_trim_group.add_argument('--middle_threshold', type=float, default=85.0,
                                    help='Adapters in the middle of reads must have at least this '
-                                        'percent identity to be removed and split the read (0 to '
-                                        '100)')
+                                        'percent identity to be found (0 to 100)')
     middle_trim_group.add_argument('--extra_middle_trim_good_side', type=int, default=10,
                                    help='This many additional bases will be removed next to '
                                         'middle adapters on their "good" side')

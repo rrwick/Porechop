@@ -166,7 +166,7 @@ class NanoporeRead(object):
                         masked_seq[read_end:]
                     self.middle_adapter_positions.update(range(read_start, read_end))
 
-                    self.middle_hit_str += '  found ' + adapter_name + ' (read coords: ' + \
+                    self.middle_hit_str += '  ' + adapter_name + ' (read coords: ' + \
                                            str(read_start) + '-' + str(read_end) + ', ' + \
                                            'identity: ' + '%.1f' % score + '%)\n'
 
