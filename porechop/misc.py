@@ -180,6 +180,7 @@ def print_table(table, print_dest, alignments='', max_col_width=30, col_separati
     """
     Args:
         table: a list of lists of strings (one row is one list, all rows should be the same length)
+        print_dest: either sys.stdout or sys.stderr - where the table will be printed
         alignments: a string of L and R, indicating the alignment for each row
         max_col_width: values longer than this will be wrapped
         col_separation: the number of spaces between columns

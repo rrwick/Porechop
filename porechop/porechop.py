@@ -40,14 +40,16 @@ def main():
 
     if matching_sets:
         find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
-                                   args.extra_end_trim, args.end_threshold, args.scoring_scheme_vals,
-                                   args.print_dest, args.min_trim_size, args.threads)
-
+                                   args.extra_end_trim, args.end_threshold,
+                                   args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
+                                   args.threads)
         display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
 
         find_adapters_in_read_middles(reads, matching_sets, args.verbosity, args.middle_threshold,
-                                      args.extra_middle_trim_good_side, args.extra_middle_trim_bad_side,
-                                      args.scoring_scheme_vals, args.print_dest, args.threads)
+                                      args.extra_middle_trim_good_side,
+                                      args.extra_middle_trim_bad_side, args.scoring_scheme_vals,
+                                      args.print_dest, args.threads)
+        display_read_middle_trimming_summary(reads, args.verbosity, args.print_dest)
     else:
         print('No adapters found - output reads are unchanged from input reads\n',
               file=args.print_dest)
@@ -319,6 +321,14 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
                     print(out, file=print_dest, flush=True)
 
 
+def display_read_middle_trimming_summary(reads, verbosity, print_dest):
+    if verbosity < 1:
+        return
+    middle_trim_count = sum(1 if x.middle_adapter_positions else 0 for x in reads)
+    print(str(middle_trim_count) + ' / ' + str(len(reads)) +
+          ' reads were split based on middle adapters\n', file=print_dest)
+
+
 def output_reads(reads, out_format, output, read_type, verbosity, min_split_read_size, print_dest):
     if out_format == 'auto':
         if output is None:
@@ -351,5 +361,5 @@ def output_reads(reads, out_format, output, read_type, verbosity, min_split_read
             subprocess.check_output('gzip -c ' + out_filename + ' > ' + output,
                                     stderr=subprocess.STDOUT, shell=True)
             os.remove(out_filename)
-        if verbosity > 1:
+        if verbosity > 0:
             print('\nSaved result to ' + os.path.abspath(output) + '\n', file=print_dest)
