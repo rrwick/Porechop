@@ -208,7 +208,7 @@ def print_table(table, print_dest, alignments='', max_col_width=30, col_separati
     if row_extra_text is None:
         row_extra_text = {}
     if leading_newline:
-        print('')
+        print('', file=print_dest)
     alignments += 'L' * (column_count - len(alignments))  # Fill out with L, if incomplete
     if fixed_col_widths is not None:
         col_widths = fixed_col_widths
