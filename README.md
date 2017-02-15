@@ -128,9 +128,11 @@ TGTTGTTGTTGTTATTGTTGTTATTGTTGTTGTATTGTTGTTATTGTTGTTGTTGTACATTGTTATTGTTGTATTGTTGT
 
 If you run Porechop with `--discard_middle`, the reads with internal adapters will be thrown out instead of split.
 
-This approach might make sense if you are trimming reads from a barcoded run, as chimeric reads here may combine sequences from different barcode bins. For example, consider this read:
-`NB01_rev - SEQUENCE_1 - SQK-NSK007_Y_Top - NB02_rev -  SEQUENCE_2`
-SEQUENCE_1 probably belongs in the NB01 bin and SEQUENCE_2 belongs in the NB02 bin, so while we could split the read, we might end up with contamination from another bin. Throwing the read out with `--discard_middle` might be the better option.
+This approach might make sense if you are trimming reads from a barcoded run, as chimeric reads may combine sequences from different bins. For example, consider this read:
+```
+NB01_rev - SEQUENCE_1 - SQK-NSK007_Y_Top - NB02_rev -  SEQUENCE_2
+```
+SEQUENCE_1 belongs in the NB01 bin and SEQUENCE_2 belongs in the NB02 bin, so while we could split the read, we would end up with contamination from another bin. Throwing the read out with `--discard_middle` might be the better option.
 
 
 ### Output
@@ -250,9 +252,11 @@ Middle adapter settings:
 
 # Acknowledgements
 
-Porechop was inspired by (and largely coded during) [Porecamp Australia 2017](https://porecamp-au.github.io/). Many thanks to the organisers and attendees, who helped me realise that a Nanopore adapter trimmer might be a useful tool!
+Porechop was inspired by (and largely coded during) [Porecamp Australia 2017](https://porecamp-au.github.io/). Thanks to the organisers and attendees, who helped me realise that a Nanopore adapter trimmer might be a useful tool!
 
 Also, I'd like to thank the [SeqAn](https://www.seqan.de/) developers for their great library (Porechop uses SeqAn to perform its alignments).
+
+And of course, many thanks to [Kat Holt](https://holtlab.net/) and [Louise Judd](https://scholar.google.com.au/citations?user=eO22mYUAAAAJ&hl=en) for keeping me well supplied with Nanopore reads!
 
 
 
