@@ -72,10 +72,12 @@ class NanoporeRead(object):
         split_read_parts = [x for x in split_read_parts if len(x[0]) >= min_split_read_size]
         return split_read_parts
 
-    def get_fasta(self, min_split_read_size):
+    def get_fasta(self, min_split_read_size, discard_middle):
         if not self.middle_trim_positions:
             seq = add_line_breaks_to_sequence(self.get_seq_with_start_end_adapters_trimmed(), 70)
             return ''.join(['>', self.name, '\n', seq])
+        elif discard_middle:
+            return ''
         else:
             fasta_str = ''
             for i, split_read_part in enumerate(self.get_split_read_parts(min_split_read_size)):
@@ -84,11 +86,13 @@ class NanoporeRead(object):
                 fasta_str += ''.join(['>', read_name, '\n', seq])
             return fasta_str
 
-    def get_fastq(self, min_split_read_size):
+    def get_fastq(self, min_split_read_size, discard_middle):
         if not self.middle_trim_positions:
             return ''.join(['@', self.name, '\n',
                             self.get_seq_with_start_end_adapters_trimmed(), '\n+\n',
                             self.get_quals_with_start_end_adapters_trimmed(), '\n'])
+        elif discard_middle:
+            return ''
         else:
             fastq_str = ''
             for i, split_read_part in enumerate(self.get_split_read_parts(min_split_read_size)):

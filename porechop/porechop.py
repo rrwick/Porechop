@@ -49,13 +49,14 @@ def main():
                                       args.extra_middle_trim_good_side,
                                       args.extra_middle_trim_bad_side, args.scoring_scheme_vals,
                                       args.print_dest, args.threads)
-        display_read_middle_trimming_summary(reads, args.verbosity, args.print_dest)
+        display_read_middle_trimming_summary(reads, args.discard_middle, args.verbosity,
+                                             args.print_dest)
     else:
         print('No adapters found - output reads are unchanged from input reads\n',
               file=args.print_dest)
 
     output_reads(reads, args.format, args.output, read_type, args.verbosity,
-                 args.min_split_read_size, args.print_dest)
+                 args.discard_middle, args.min_split_read_size, args.print_dest)
 
 
 def get_arguments():
@@ -118,6 +119,8 @@ def get_arguments():
     middle_trim_group = parser.add_argument_group('Middle adapter settings',
                                                   'Control the splitting of read from middle '
                                                   'adapters')
+    middle_trim_group.add_argument('--discard_middle', action='store_true',
+                                   help='Reads with middle adapters will be discarded, not split')
     middle_trim_group.add_argument('--middle_threshold', type=float, default=85.0,
                                    help='Adapters in the middle of reads must have at least this '
                                         'percent identity to be removed and split the read (0 to '
@@ -321,15 +324,17 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
                     print(out, file=print_dest, flush=True)
 
 
-def display_read_middle_trimming_summary(reads, verbosity, print_dest):
+def display_read_middle_trimming_summary(reads, discard_middle, verbosity, print_dest):
     if verbosity < 1:
         return
     middle_trim_count = sum(1 if x.middle_adapter_positions else 0 for x in reads)
-    print(str(middle_trim_count) + ' / ' + str(len(reads)) +
-          ' reads were split based on middle adapters\n', file=print_dest)
+    verb = 'discarded' if discard_middle else 'split'
+    print(str(middle_trim_count) + ' / ' + str(len(reads)) + ' reads were ' + verb +
+          ' based on middle adapters\n', file=print_dest)
 
 
-def output_reads(reads, out_format, output, read_type, verbosity, min_split_read_size, print_dest):
+def output_reads(reads, out_format, output, read_type, verbosity, discard_middle,
+                 min_split_size, print_dest):
     if out_format == 'auto':
         if output is None:
             out_format = read_type
@@ -342,8 +347,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, min_split_read
 
     if output is None:  # output to stdout
         for read in reads:
-            read_str = read.get_fasta(min_split_read_size) if out_format == 'fasta' \
-                else read.get_fastq(min_split_read_size)
+            read_str = read.get_fasta(min_split_size, discard_middle) if out_format == 'fasta' \
+                else read.get_fastq(min_split_size, discard_middle)
             print(read_str, end='')
 
     else:  # output to file
@@ -354,8 +359,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, min_split_read
             out_filename = output
         with open(out_filename, 'wt') as out:
             for read in reads:
-                read_str = read.get_fasta(min_split_read_size) if out_format == 'fasta' \
-                    else read.get_fastq(min_split_read_size)
+                read_str = read.get_fasta(min_split_size, discard_middle) if out_format == 'fasta' \
+                    else read.get_fastq(min_split_size, discard_middle)
                 out.write(read_str)
         if gzipped_out:
             subprocess.check_output('gzip -c ' + out_filename + ' > ' + output,

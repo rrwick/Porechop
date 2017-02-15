@@ -75,6 +75,9 @@ __All you really need to know:__<br>
 __Trimmed reads to stdout, if you prefer:__<br>
 `porechop -i input_reads.fastq.gz > output_reads.fastq`
 
+__Throw out reads with middle adapters (instead of splitting them):__<br>
+`porechop -i input_reads.fastq.gz -o output_reads.fastq.gz --discard_middle`
+
 __Also works with FASTA:__<br>
 `porechop -i input_reads.fasta -o output_reads.fasta`
 
@@ -118,6 +121,15 @@ Here is a real example of the "good" and "bad" sides of an adapter. The adapter 
 ```
 TGTTGTTGTTGTTATTGTTGTTATTGTTGTTGTATTGTTGTTATTGTTGTTGTTGTACATTGTTATTGTTGTATTGTTGTTATTGTTGTTGTATTATCGGTGTACTTCGTTCAGTTACGTATTACTATCGCTATTGTTTGCAGTGAGAGGTGGCGGTGAGCGTTTTCAAATGGCCCTGTACAATCATGGGATAACAACATAAGGAACGGACCATGAAGTCACTTCT
 ```
+
+
+### Discard reads with internal adapters
+
+If you run Porechop with `--discard_middle`, the reads with internal adapters will be thrown out instead of split.
+
+This approach might make sense if you are trimming reads from a barcoded run, as chimeric reads here may combine sequences from different barcode bins. For example, consider this read:
+`NB01_rev - SEQUENCE_1 - SQK-NSK007_Y_Top - NB02_rev -  SEQUENCE_2`
+SEQUENCE_1 probably belongs in the NB01 bin and SEQUENCE_2 belongs in the NB02 bin, so while we could split the read, we might end up with contamination from another bin. Throwing the read out with `--discard_middle` might be the better option.
 
 
 ### Output
