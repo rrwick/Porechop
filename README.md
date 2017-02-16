@@ -1,6 +1,6 @@
 <p align="center"><img src="misc/logo.png" alt="Porechop" width="600"></p>
 
-Porechop is a tool for finding and removing adapters from Oxford Nanopore reads. Adapters on the ends of reads are trimmed off, and when a read has an adapter in its middle, it is treated as chimeric and chopped into two separate reads. Porechop performs thorough alignments to effectively find adapters, even at low sequence identity.
+Porechop is a tool for finding and removing adapters from [Oxford Nanopore](https://nanoporetech.com/) reads. Adapters on the ends of reads are trimmed off, and when a read has an adapter in its middle, it is treated as chimeric and chopped into separate reads. Porechop performs thorough alignments to effectively find adapters, even at low sequence identity.
 
 
 
@@ -144,12 +144,12 @@ If Porechop is run without `-o`, then it will output the trimmed reads to stdout
 Whether or not `-o` is used, the `--verbosity` option will change the output of progress info:
 * `--verbosity 0` gives no output.
 * `--verbosity 1` (the default) gives summary info about end adapter trimming and shows all instances of middle adapter splitting.
-* `--verbosity 2` is described below.
+* `--verbosity 2` shows sequences and is described below.
 
 
 ### Verbose output
 
-If you call Porechop with `--verbosity 2`, then it will display the start/end of each read and use ANSI colours to show the trimming. Red indicates the adapter sequence and yellow indicates additional trimmed bases:
+If you call Porechop with `--verbosity 2`, then it will display the start/end of each read show the trimming in colour. Red indicates the adapter sequence and yellow indicates additional trimmed bases:
 
 <p align="center"><img src="misc/end_trimming.png" alt="End trimming"></p>
 
@@ -167,7 +167,6 @@ The known Nanopore adapters that Porechop looks for are defined in the [adapters
 They are:
 * SQK-MAP006
 * SQK-NSK007
-* PCR barcoding
 * Native barcoding
 
 If you know of any I missed, please let me know and I'll add them!
