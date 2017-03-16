@@ -41,7 +41,7 @@ C_LIB.freeCString.restype = None
 
 def adapter_alignment(read_sequence, adapter_sequence, scoring_scheme_vals):
     """
-    Python wrapper for barcodeAlignment C++ function.
+    Python wrapper for adapterAlignment C++ function.
     """
     match_score = scoring_scheme_vals[0]
     mismatch_score = scoring_scheme_vals[1]
@@ -50,7 +50,6 @@ def adapter_alignment(read_sequence, adapter_sequence, scoring_scheme_vals):
     ptr = C_LIB.adapterAlignment(read_sequence.encode('utf-8'), adapter_sequence.encode('utf-8'),
                                  match_score, mismatch_score, gap_open_score, gap_extend_score)
     result_string = c_string_to_python_string(ptr)
-
     return result_string
 
 

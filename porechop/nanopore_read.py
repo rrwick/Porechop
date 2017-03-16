@@ -273,16 +273,18 @@ class NanoporeRead(object):
 
 def align_adapter(read_seq, adapter_seq, scoring_scheme_vals):
     alignment_result = adapter_alignment(read_seq, adapter_seq, scoring_scheme_vals)
-
     result_parts = alignment_result.split(',')
-
     read_start = int(result_parts[0])
-    read_end = int(result_parts[1]) + 1
-    # adapter_start = int(result_parts[2])
-    # adapter_end = int(result_parts[3]) + 1
-    # raw_score = int(result_parts[4])
-    aligned_region_percent_identity = float(result_parts[5])
-    full_adapter_percent_identity = float(result_parts[6])
+
+    # If the read start is -1, that indicates that the alignment failed completely.
+    if read_start == -1:
+        read_end = 0
+        aligned_region_percent_identity = 0.0
+        full_adapter_percent_identity = 0.0
+    else:
+        read_end = int(result_parts[1]) + 1
+        aligned_region_percent_identity = float(result_parts[5])
+        full_adapter_percent_identity = float(result_parts[6])
 
     return full_adapter_percent_identity, aligned_region_percent_identity, read_start, read_end
 
