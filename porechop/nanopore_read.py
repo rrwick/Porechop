@@ -74,22 +74,28 @@ class NanoporeRead(object):
 
     def get_fasta(self, min_split_read_size, discard_middle):
         if not self.middle_trim_positions:
-            seq = add_line_breaks_to_sequence(self.get_seq_with_start_end_adapters_trimmed(), 70)
-            return ''.join(['>', self.name, '\n', seq])
+            seq = self.get_seq_with_start_end_adapters_trimmed()
+            if not seq:  # Don't return empty sequences
+                return ''
+            return ''.join(['>', self.name, '\n', add_line_breaks_to_sequence(seq, 70)])
         elif discard_middle:
             return ''
         else:
             fasta_str = ''
             for i, split_read_part in enumerate(self.get_split_read_parts(min_split_read_size)):
                 read_name = add_number_to_read_name(self.name, i + 1)
+                if not split_read_part[0]:  # Don't return empty sequences
+                    return ''
                 seq = add_line_breaks_to_sequence(split_read_part[0], 70)
                 fasta_str += ''.join(['>', read_name, '\n', seq])
             return fasta_str
 
     def get_fastq(self, min_split_read_size, discard_middle):
         if not self.middle_trim_positions:
-            return ''.join(['@', self.name, '\n',
-                            self.get_seq_with_start_end_adapters_trimmed(), '\n+\n',
+            seq = self.get_seq_with_start_end_adapters_trimmed()
+            if not seq:  # Don't return empty sequences
+                return ''
+            return ''.join(['@', self.name, '\n', seq, '\n+\n',
                             self.get_quals_with_start_end_adapters_trimmed(), '\n'])
         elif discard_middle:
             return ''
@@ -97,6 +103,8 @@ class NanoporeRead(object):
             fastq_str = ''
             for i, split_read_part in enumerate(self.get_split_read_parts(min_split_read_size)):
                 read_name = add_number_to_read_name(self.name, i + 1)
+                if not split_read_part[0]:  # Don't return empty sequences
+                    return ''
                 fastq_str += ''.join(['@', read_name, '\n', split_read_part[0], '\n+\n',
                                       split_read_part[1], '\n'])
             return fastq_str
