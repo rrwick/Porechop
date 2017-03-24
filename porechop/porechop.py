@@ -20,8 +20,9 @@ import sys
 import subprocess
 import multiprocessing
 from multiprocessing.dummy import Pool as ThreadPool
+from collections import defaultdict
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, check_file_exists, \
-    MyHelpFormatter
+    MyHelpFormatter, int_to_str
 from .adapters import ADAPTERS
 from .nanopore_read import NanoporeRead
 from .version import __version__
@@ -39,24 +40,27 @@ def main():
     display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
 
     if matching_sets:
+        check_barcodes = (args.barcode_dir is not None)
         find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
                                    args.extra_end_trim, args.end_threshold,
                                    args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
-                                   args.threads)
+                                   args.threads, check_barcodes, args.barcode_threshold,
+                                   args.barcode_diff, args.require_two_barcodes)
         display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
 
         find_adapters_in_read_middles(reads, matching_sets, args.verbosity, args.middle_threshold,
                                       args.extra_middle_trim_good_side,
                                       args.extra_middle_trim_bad_side, args.scoring_scheme_vals,
-                                      args.print_dest, args.threads)
+                                      args.print_dest, args.threads, args.discard_middle)
         display_read_middle_trimming_summary(reads, args.discard_middle, args.verbosity,
                                              args.print_dest)
-    else:
+    elif args.verbosity > 0:
         print('No adapters found - output reads are unchanged from input reads\n',
               file=args.print_dest)
 
     output_reads(reads, args.format, args.output, read_type, args.verbosity,
-                 args.discard_middle, args.min_split_read_size, args.print_dest)
+                 args.discard_middle, args.min_split_read_size, args.print_dest,
+                 args.barcode_dir)
 
 
 def get_arguments():
@@ -85,8 +89,29 @@ def get_arguments():
                                  'a file and stderr if reads are printed to stdout')
     main_group.add_argument('-t', '--threads', type=int, default=default_threads,
                             help='Number of threads to use for adapter alignment')
-
     main_group.add_argument('--version', action='version', version=__version__)
+
+    barcode_group = parser.add_argument_group('Barcode binning settings',
+                                              'Control the binning of reads based on barcodes '
+                                              '(i.e. barcode demultiplexing)')
+    barcode_group.add_argument('-b', '--barcode_dir',
+                               help='Reads will be binned based on their barcode and saved to '
+                                    'separate files in this directory (incompatible with '
+                                    '--output)')
+    barcode_group.add_argument('--barcode_threshold', type=float, default=75.0,
+                               help='A read must have at least this percent identity to a barcode '
+                                    'to be binned')
+    barcode_group.add_argument('--barcode_diff', type=float, default=5.0,
+                               help="If the difference between a read's best barcode identity and "
+                                    "its second-best barcode identity is less than this value, it "
+                                    "will not be put in a barcode bin (to exclude cases which are "
+                                    "too close to call)")
+    barcode_group.add_argument('--require_two_barcodes', action='store_true',
+                               help='Reads will only be put in barcode bins if they have a strong '
+                                    'hit for the barcode on both their start and end (default: '
+                                    'a read can be binned with only a single barcode alignment, '
+                                    'assuming no contradictory barcode alignments exist at the '
+                                    'other end)')
 
     adapter_search_group = parser.add_argument_group('Adapter search settings',
                                                      'Control how the program determines which '
@@ -95,7 +120,7 @@ def get_arguments():
                                       help='An adapter set has to have at least this percent '
                                            'identity to be labelled as present and trimmed off '
                                            '(0 to 100)')
-    adapter_search_group.add_argument('--check_reads', type=int, default=1000,
+    adapter_search_group.add_argument('--check_reads', type=int, default=10000,
                                       help='This many reads will be aligned to all possible '
                                            'adapters to determine which adapter sets are present')
     adapter_search_group.add_argument('--scoring_scheme', type=str, default='3,-6,-5,-2',
@@ -121,7 +146,8 @@ def get_arguments():
                                                   'adapters')
     middle_trim_group.add_argument('--discard_middle', action='store_true',
                                    help='Reads with middle adapters will be discarded (default: '
-                                        'reads with middle adapters are split)')
+                                        'reads with middle adapters are split) (this option is '
+                                        'on by default when outputting reads into barcode bins)')
     middle_trim_group.add_argument('--middle_threshold', type=float, default=85.0,
                                    help='Adapters in the middle of reads must have at least this '
                                         'percent identity to be found (0 to 100)')
@@ -145,7 +171,13 @@ def get_arguments():
         sys.exit('Error: incorrectly formatted scoring scheme')
     args.scoring_scheme_vals = scoring_scheme
 
-    if args.output is None:
+    if args.barcode_dir is not None and args.output is not None:
+        sys.exit('Error: only one of the following options may be used: --output, --barcode_dir')
+
+    if args.barcode_dir is not None:
+        args.discard_middle = True
+
+    if args.output is None and args.barcode_dir is None:
         args.print_dest = sys.stderr
     else:
         args.print_dest = sys.stdout
@@ -217,10 +249,10 @@ def display_adapter_set_results(matching_sets, verbosity, print_dest):
 
 def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_trim_size,
                                end_threshold, scoring_scheme_vals, print_dest, min_trim_size,
-                               threads):
+                               threads, check_barcodes, barcode_threshold, barcode_diff,
+                               require_two_barcodes):
     if verbosity > 0:
-        matching_set_names = ', '.join([x.name for x in matching_sets])
-        print(bold_underline('Trimming ' + matching_set_names + ' adapters from read ends'),
+        print(bold_underline('Trimming adapters from read ends'),
               file=print_dest)
         name_len = max(max(len(x.start_sequence[0]) for x in matching_sets),
                        max(len(x.end_sequence[0]) for x in matching_sets))
@@ -235,27 +267,33 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
     if threads == 1:
         for read in reads:
             read.find_start_trim(matching_sets, end_size, extra_trim_size, end_threshold,
-                                 scoring_scheme_vals, min_trim_size)
+                                 scoring_scheme_vals, min_trim_size, check_barcodes)
             read.find_end_trim(matching_sets, end_size, extra_trim_size, end_threshold,
-                               scoring_scheme_vals, min_trim_size)
+                               scoring_scheme_vals, min_trim_size, check_barcodes)
+            if check_barcodes:
+                read.determine_barcode(barcode_threshold, barcode_diff, require_two_barcodes)
             if verbosity > 1:
-                print(read.formatted_start_and_end_seq(end_size, extra_trim_size), file=print_dest)
+                print(read.formatted_start_and_end_seq(end_size, extra_trim_size, check_barcodes),
+                      file=print_dest)
 
     # If multi-threaded, use a thread pool.
     else:
         def start_end_trim_one_arg(all_args):
-            r, a, b, c, d, e, f, v = all_args
-            r.find_start_trim(a, b, c, d, e, f)
-            r.find_end_trim(a, b, c, d, e, f)
+            r, a, b, c, d, e, f, g, h, i, j, v = all_args
+            r.find_start_trim(a, b, c, d, e, f, g)
+            r.find_end_trim(a, b, c, d, e, f, g)
+            if check_barcodes:
+                r.determine_barcode(h, i, j)
             if v > 1:
-                return r.formatted_start_and_end_seq(b, c)
+                return r.formatted_start_and_end_seq(b, c, g)
             else:
                 return ''
         with ThreadPool(threads) as pool:
             arg_list = []
             for read in reads:
                 arg_list.append((read, matching_sets, end_size, extra_trim_size, end_threshold,
-                                 scoring_scheme_vals, min_trim_size, verbosity))
+                                 scoring_scheme_vals, min_trim_size, check_barcodes,
+                                 barcode_threshold, barcode_diff, require_two_barcodes, verbosity))
             for out in pool.imap(start_end_trim_one_arg, arg_list):
                 if verbosity > 1:
                     print(out, file=print_dest, flush=True)
@@ -282,10 +320,10 @@ def display_read_end_trimming_summary(reads, verbosity, print_dest):
 
 def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_threshold,
                                   extra_trim_good_side, extra_trim_bad_side, scoring_scheme_vals,
-                                  print_dest, threads):
+                                  print_dest, threads, discard_middle):
     if verbosity > 0:
-        matching_set_names = ', '.join([x.name for x in matching_sets])
-        print(bold_underline('Splitting reads containing ' + matching_set_names + ' adapters'),
+        verb = 'Discarding' if discard_middle else 'Splitting'
+        print(bold_underline(verb + ' reads containing middle adapters'),
               file=print_dest)
 
     adapters = []
@@ -334,10 +372,10 @@ def display_read_middle_trimming_summary(reads, discard_middle, verbosity, print
 
 
 def output_reads(reads, out_format, output, read_type, verbosity, discard_middle,
-                 min_split_size, print_dest):
+                 min_split_size, print_dest, barcode_dir):
     if out_format == 'auto':
         if output is None:
-            out_format = read_type
+            out_format = read_type.lower()
         elif '.fasta' in output:
             out_format = 'fasta'
         elif '.fastq' in output:
@@ -345,13 +383,53 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
         else:
             out_format = read_type.lower()
 
-    if output is None:  # output to stdout
+    # Output reads to barcode bins.
+    if barcode_dir is not None:
+        if not os.path.isdir(barcode_dir):
+            os.makedirs(barcode_dir)
+        barcode_files = {}
+        barcode_read_counts, barcode_base_counts = defaultdict(int), defaultdict(int)
+        for read in reads:
+            barcode_name = read.barcode_call
+            read_str = read.get_fasta(min_split_size, discard_middle) if out_format == 'fasta' \
+                else read.get_fastq(min_split_size, discard_middle)
+            if not read_str:
+                continue
+            if barcode_name not in barcode_files:
+                barcode_files[barcode_name] = \
+                    open(os.path.join(barcode_dir, barcode_name + '.' + out_format), 'wt')
+            barcode_files[barcode_name].write(read_str)
+            barcode_read_counts[barcode_name] += 1
+            barcode_base_counts[barcode_name] += read.seq_length_with_start_end_adapters_trimmed()
+        table = [['Barcode', 'Reads', 'Total bases', 'File']]
+
+        for barcode_name in sorted(barcode_files.keys()):
+            barcode_files[barcode_name].close()
+            bin_filename = os.path.join(barcode_dir, barcode_name + '.' + out_format)
+            if not os.path.isfile(bin_filename):
+                continue
+            bin_filename_gz = bin_filename + '.gz'
+            if os.path.isfile(bin_filename_gz):
+                os.remove(bin_filename_gz)
+            subprocess.check_output('gzip ' + bin_filename, stderr=subprocess.STDOUT, shell=True)
+            table_row = [barcode_name, int_to_str(barcode_read_counts[barcode_name]),
+                         int_to_str(barcode_base_counts[barcode_name]), bin_filename_gz]
+            table.append(table_row)
+        if verbosity > 0:
+            print('')
+            print(bold_underline('Saving trimmed reads to barcode-specific files'), flush=True,
+                  file=print_dest)
+            print_table(table, print_dest, alignments='LRRL')
+
+    # Output to all reads to stdout.
+    elif output is None:
         for read in reads:
             read_str = read.get_fasta(min_split_size, discard_middle) if out_format == 'fasta' \
                 else read.get_fastq(min_split_size, discard_middle)
             print(read_str, end='')
 
-    else:  # output to file
+    # Output to all reads to file.
+    else:
         gzipped_out = output.endswith('.gz')
         if gzipped_out:
             out_filename = 'TEMP_' + str(os.getpid()) + '.fastq'

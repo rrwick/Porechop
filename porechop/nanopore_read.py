@@ -35,6 +35,15 @@ class NanoporeRead(object):
         self.middle_trim_positions = set()
         self.middle_hit_str = ''
 
+        self.start_barcode_scores = {}
+        self.end_barcode_scores = {}
+
+        self.best_start_barcode = ('none', 0.0)
+        self.best_end_barcode = ('none', 0.0)
+        self.second_best_start_barcode = ('none', 0.0)
+        self.second_best_end_barcode = ('none', 0.0)
+        self.barcode_call = 'none'
+
     def get_seq_with_start_end_adapters_trimmed(self):
         if not self.start_trim_amount and not self.end_trim_amount:
             return self.seq
@@ -42,6 +51,9 @@ class NanoporeRead(object):
         end_pos = len(self.seq) - self.end_trim_amount
         trimmed_seq = self.seq[start_pos:end_pos]
         return trimmed_seq
+
+    def seq_length_with_start_end_adapters_trimmed(self):
+        return len(self.seq) - self.end_trim_amount - self.start_trim_amount
 
     def get_quals_with_start_end_adapters_trimmed(self):
         if not self.start_trim_amount and not self.end_trim_amount:
@@ -125,35 +137,38 @@ class NanoporeRead(object):
         adapter_set.best_end_score = max(adapter_set.best_end_score, score)
 
     def find_start_trim(self, adapters, end_size, extra_trim_size, end_threshold,
-                        scoring_scheme_vals, min_trim_size):
+                        scoring_scheme_vals, min_trim_size, check_barcodes):
         """
         Aligns one or more adapter sequences and possibly adjusts the read's start trim amount based
         on the result.
         """
         read_seq_start = self.seq[:end_size]
         for adapter in adapters:
-            _, score, read_start, read_end = align_adapter(read_seq_start,
-                                                           adapter.start_sequence[1],
-                                                           scoring_scheme_vals)
-            if score > end_threshold and read_end != end_size and \
+            full_score, partial_score, read_start, read_end = \
+                align_adapter(read_seq_start, adapter.start_sequence[1], scoring_scheme_vals)
+            if partial_score > end_threshold and read_end != end_size and \
                     read_end - read_start >= min_trim_size:
                 trim_amount = read_end + extra_trim_size
                 self.start_trim_amount = max(self.start_trim_amount, trim_amount)
+            if check_barcodes and adapter.is_barcode():
+                self.start_barcode_scores[adapter.get_barcode_name()] = full_score
 
     def find_end_trim(self, adapters, end_size, extra_trim_size, end_threshold,
-                      scoring_scheme_vals, min_trim_size):
+                      scoring_scheme_vals, min_trim_size, check_barcodes):
         """
         Aligns one or more adapter sequences and possibly adjusts the read's end trim amount based
         on the result.
         """
         read_seq_end = self.seq[-end_size:]
         for adapter in adapters:
-            _, score, read_start, read_end = align_adapter(read_seq_end, adapter.end_sequence[1],
-                                                           scoring_scheme_vals)
-            if score > end_threshold and read_start != 0 and \
+            full_score, partial_score, read_start, read_end = \
+                align_adapter(read_seq_end, adapter.end_sequence[1], scoring_scheme_vals)
+            if partial_score > end_threshold and read_start != 0 and \
                     read_end - read_start >= min_trim_size:
                 trim_amount = (end_size - read_start) + extra_trim_size
                 self.end_trim_amount = max(self.end_trim_amount, trim_amount)
+            if check_barcodes and adapter.is_barcode():
+                self.end_barcode_scores[adapter.get_barcode_name()] = full_score
 
     def find_middle_adapters(self, adapters, middle_threshold, extra_middle_trim_good_side,
                              extra_middle_trim_bad_side, scoring_scheme_vals,
@@ -167,16 +182,16 @@ class NanoporeRead(object):
             # We keep aligning adapters as long we get strong hits, so we can find multiple
             # occurrences in a single read.
             while True:
-                score, _, read_start, read_end = align_adapter(masked_seq, adapter_seq,
-                                                               scoring_scheme_vals)
-                if score >= middle_threshold:
+                full_score, _, read_start, read_end = align_adapter(masked_seq, adapter_seq,
+                                                                    scoring_scheme_vals)
+                if full_score >= middle_threshold:
                     masked_seq = masked_seq[:read_start] + '-' * (read_end - read_start) + \
                         masked_seq[read_end:]
                     self.middle_adapter_positions.update(range(read_start, read_end))
 
                     self.middle_hit_str += '  ' + adapter_name + ' (read coords: ' + \
                                            str(read_start) + '-' + str(read_end) + ', ' + \
-                                           'identity: ' + '%.1f' % score + '%)\n'
+                                           'identity: ' + '%.1f' % full_score + '%)\n'
 
                     trim_start = read_start - extra_middle_trim_good_side
                     if adapter_name in start_sequence_names:
@@ -201,8 +216,8 @@ class NanoporeRead(object):
         formatted_str = ''
         if red_bases:
             formatted_str = red(start_seq[:red_bases])
-        formatted_str += yellow(start_seq[red_bases:red_bases+2])
-        formatted_str += start_seq[red_bases+2:]
+        formatted_str += yellow(start_seq[red_bases:red_bases+extra_trim_size])
+        formatted_str += start_seq[red_bases+extra_trim_size:]
         return formatted_str
 
     def formatted_end_seq(self, end_size, extra_trim_size):
@@ -216,13 +231,55 @@ class NanoporeRead(object):
         formatted_str = ''
         if red_bases:
             formatted_str = red(end_seq[-red_bases:])
-        formatted_str = yellow(end_seq[-(red_bases+2):-red_bases]) + formatted_str
-        formatted_str = end_seq[:-(red_bases+2)] + formatted_str
+        formatted_str = yellow(end_seq[-(red_bases+extra_trim_size):-red_bases]) + formatted_str
+        formatted_str = end_seq[:-(red_bases+extra_trim_size)] + formatted_str
         return formatted_str
 
-    def formatted_start_and_end_seq(self, end_size, extra_trim_size):
-        return self.formatted_start_seq(end_size, extra_trim_size) + '...' + \
-               self.formatted_end_seq(end_size, extra_trim_size)
+    def formatted_whole_seq(self, extra_trim_size):
+        """
+        Returns the entire read sequence, with any found adapters highlighted in red.
+        """
+        if not self.start_trim_amount and not self.end_trim_amount:
+            return self.seq
+
+        red_start_bases, red_end_bases = 0, 0
+        if self.start_trim_amount:
+            red_start_bases = self.start_trim_amount - extra_trim_size
+        if self.end_trim_amount:
+            red_end_bases = self.end_trim_amount - extra_trim_size
+        if red_start_bases + red_end_bases >= len(self.seq):
+            return red(self.seq)
+
+        formatted_start, formatted_end = '', ''
+        if self.start_trim_amount:
+            formatted_start = red(self.seq[:red_start_bases])
+        if self.end_trim_amount:
+            formatted_end = red(self.seq[-red_end_bases:])
+        middle = self.seq[red_start_bases:len(self.seq)-red_end_bases]
+
+        if len(middle) <= extra_trim_size * 2:
+            middle = yellow(middle)
+        else:
+            if self.start_trim_amount:
+                middle = yellow(middle[:extra_trim_size]) + middle[extra_trim_size:]
+            if self.end_trim_amount:
+                middle = middle[:-extra_trim_size] + yellow(middle[-extra_trim_size:])
+        return formatted_start + middle + formatted_end
+
+    def formatted_start_and_end_seq(self, end_size, extra_trim_size, check_barcodes):
+        read_seq = ''
+        if check_barcodes:
+            start_name, start_id = self.best_start_barcode
+            end_name, end_id = self.best_end_barcode
+            read_seq += 'start: ' + start_name + ' (' + '%.1f' % start_id + '%), '
+            read_seq += 'end: ' + end_name + ' (' + '%.1f' % end_id + '%), '
+            read_seq += 'barcode call: ' + self.barcode_call + '   '
+        if len(self.seq) <= 2 * end_size:
+            read_seq += self.formatted_whole_seq(extra_trim_size)
+        else:
+            read_seq += (self.formatted_start_seq(end_size, extra_trim_size) + '...' +
+                         self.formatted_end_seq(end_size, extra_trim_size))
+        return read_seq
 
     def formatted_middle_seq(self):
         """
@@ -269,6 +326,55 @@ class NanoporeRead(object):
         if verbosity > 1:
             results += self.formatted_middle_seq() + '\n'
         return results
+
+    def determine_barcode(self, barcode_threshold, barcode_diff, require_two_barcodes):
+        """
+        This function works through the logic of choosing a barcode for the read based on the
+        settings and the read's barcode alignments. It stores its result in self.barcode_call.
+        """
+        start_barcode_scores = sorted(self.start_barcode_scores.items(), reverse=True,
+                                      key=lambda x: x[1])
+        end_barcode_scores = sorted(self.end_barcode_scores.items(), reverse=True,
+                                    key=lambda x: x[1])
+        if len(start_barcode_scores) >= 1:
+            self.best_start_barcode = start_barcode_scores[0]
+        if len(end_barcode_scores) >= 1:
+            self.best_end_barcode = end_barcode_scores[0]
+        if len(start_barcode_scores) >= 2:
+            self.second_best_start_barcode = start_barcode_scores[1]
+        if len(end_barcode_scores) >= 2:
+            self.second_best_end_barcode = end_barcode_scores[1]
+
+        start_over_threshold = (self.best_start_barcode[1] >= barcode_threshold)
+        end_over_threshold = (self.best_end_barcode[1] >= barcode_threshold)
+        start_good_diff = (self.best_start_barcode[1] >=
+                           self.second_best_start_barcode[1] + barcode_diff)
+        end_good_diff = (self.best_end_barcode[1] >=
+                         self.second_best_end_barcode[1] + barcode_diff)
+        start_end_match = (self.best_start_barcode[0] == self.best_end_barcode[0])
+
+        try:
+            if require_two_barcodes:  # user set --require_two_barcodes
+                assert (start_over_threshold and end_over_threshold and
+                        start_good_diff and end_good_diff and start_end_match)
+                self.barcode_call = self.best_start_barcode[0]
+
+            else:  # user didn't set --require_two_barcodes
+                assert (start_over_threshold or end_over_threshold)
+                if start_over_threshold:
+                    assert start_good_diff
+                if end_over_threshold:
+                    assert end_good_diff
+                if start_over_threshold and end_over_threshold:
+                    assert start_end_match
+                    self.barcode_call = self.best_start_barcode[0]
+                elif start_over_threshold:  # only start is over threshold
+                    self.barcode_call = self.best_start_barcode[0]
+                elif start_over_threshold:  # only end is over threshold
+                    self.barcode_call = self.best_end_barcode[0]
+
+        except AssertionError:
+            self.barcode_call = 'none'
 
 
 def align_adapter(read_seq, adapter_seq, scoring_scheme_vals):

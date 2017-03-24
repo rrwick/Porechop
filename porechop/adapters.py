@@ -29,6 +29,15 @@ class Adapter(object):
     def best_start_or_end_score(self):
         return max(self.best_start_score, self.best_end_score)
 
+    def is_barcode(self):
+        return 'barcod' in self.name  # will catch 'barcode' and 'barcoding'
+
+    def get_barcode_name(self):
+        start_name = self.start_sequence[0]
+        end_name = self.end_sequence[0]
+        barcode_name = end_name if len(end_name) < len(start_name) else start_name
+        return barcode_name.replace(' ', '_')
+
 
 ADAPTERS = [Adapter('SQK-MAP006',
                     start_sequence=('SQK-MAP006_Y_Top_SK63',    'GGTTGTTTCTGTTGGTGCTGATATTGCT'),
