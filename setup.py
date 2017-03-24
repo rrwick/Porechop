@@ -5,8 +5,8 @@ Run 'python3 setup.py install' to install Porechop.
 
 # Make sure this is being run with Python 3.4 or later.
 import sys
-if sys.version_info.major != 3 or sys.version_info.minor < 4:
-    print('Error: you must execute setup.py using Python 3.4 or later')
+if (sys.version_info.major == 3 and sys.version_info.minor < 4) or (sys.version_info.major == 2 and sys.version_info.minor < 7):
+    print('Error: you must execute setup.py using either Python 2.7, or Python 3.4 or later')
     sys.exit(1)
 
 import os
@@ -16,12 +16,19 @@ from distutils.core import Command
 import subprocess
 import multiprocessing
 import fnmatch
-import importlib.util
 
-# Install setuptools if not already present.
-if not importlib.util.find_spec("setuptools"):
-    import ez_setup
-    ez_setup.use_setuptools()
+try:
+    import importlib.util
+    # Install setuptools if not already present.
+    if not importlib.util.find_spec("setuptools"):
+        import ez_setup
+        ez_setup.use_setuptools()
+except ImportError:
+    # python 2.7
+    import imp
+    if not imp.find_module("setuptools"):
+        import ez_setup
+        ez_setup.use_setuptools()
 
 from setuptools import setup
 from setuptools.command.install import install
@@ -119,6 +126,7 @@ setup(name='porechop',
       author_email='rrwick@gmail.com',
       license='GPL',
       packages=['porechop'],
+      requires=['future'],
       entry_points={"console_scripts": ['porechop = porechop.porechop:main']},
       zip_safe=False,
       cmdclass={'build': PorechopBuild,

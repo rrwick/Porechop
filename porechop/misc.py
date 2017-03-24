@@ -13,6 +13,7 @@ details. You should have received a copy of the GNU General Public License along
 not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import print_function
 import sys
 import os
 import gzip
@@ -338,10 +339,14 @@ class MyHelpFormatter(argparse.HelpFormatter):
     http://stackoverflow.com/questions/3853722
     """
     def __init__(self, prog):
-        terminal_width = shutil.get_terminal_size().columns
+        try:
+            terminal_width = shutil.get_terminal_size().columns
+        except AttributeError:
+            # get_terminal_size is only available in python>=3.3
+            terminal_width = 80
         os.environ['COLUMNS'] = str(terminal_width)
         max_help_position = min(max(24, terminal_width // 3), 40)
-        super().__init__(prog, max_help_position=max_help_position)
+        super(MyHelpFormatter, self).__init__(prog, max_help_position=max_help_position)
 
     def _get_help_string(self, action):
         help_text = action.help
