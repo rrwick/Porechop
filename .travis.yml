@@ -8,6 +8,10 @@ python:
   - "3.6-dev" # 3.6 development branch
   - "3.7-dev" # 3.7 development branch
   - "nightly" # currently points to 3.7-dev
+sudo: required
+before_install:
+  - sudo apt-get update -qq
+  - sudo apt-get install --upgrade g++
 install: "python setup.py install"
 # # command to run tests
 script: python -m unittest discover
