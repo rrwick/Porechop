@@ -53,7 +53,7 @@ class NanoporeRead(object):
         return trimmed_seq
 
     def seq_length_with_start_end_adapters_trimmed(self):
-        return len(self.seq) - self.end_trim_amount - self.start_trim_amount
+        return len(self.get_seq_with_start_end_adapters_trimmed())
 
     def get_quals_with_start_end_adapters_trimmed(self):
         if not self.start_trim_amount and not self.end_trim_amount:
