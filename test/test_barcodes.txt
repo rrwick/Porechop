@@ -1,0 +1,8 @@
+1 NB01 on both ends, 5000 bp between barcodes
+2 NB02 on both ends, 6100 bp between barcodes
+3 NB03 on both ends, 7000 bp between barcodes
+4 NB01 at start only, 4000 bp after barcode
+5 NB02 at end only, 3300 before barcode
+6 NB02 at start, NB03 at end, 5500 bp between barcodes
+7 same as sequence 1, but with NB02 in the middle
+8 no barcodes, 8000 bp
