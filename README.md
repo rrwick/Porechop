@@ -2,7 +2,9 @@
 
 Porechop is a tool for finding and removing adapters from [Oxford Nanopore](https://nanoporetech.com/) reads. Adapters on the ends of reads are trimmed off, and when a read has an adapter in its middle, it is treated as chimeric and chopped into separate reads. Porechop performs thorough alignments to effectively find adapters, even at low sequence identity.
 
-I have written Porechop for and tested it on 1D Nanopore reads. Its performance on 2D or 1D<sup>2</sup> reads is unknown, so use with caution on those datasets!
+Porechop also supports demultiplexing of Nanopore reads that were barcoded with the [Native Barcoding Kit](https://store.nanoporetech.com/native-barcoding-kit-1d.html).
+
+I have written Porechop for and tested it on 1D Nanopore reads. Its performance is unknown on 2D or 1D<sup>2</sup> reads, so use with caution on those datasets!
 
 
 # Table of contents
@@ -55,7 +57,7 @@ porechop -h
 Notes:
 * If the last command complains about permissions, you may need to run it with `sudo`.
 * Install just for your user: `python3 setup.py install --user`
-    * If you get a strange 'can't combine user with prefix' error, read [this](http://stackoverflow.com/questions/4495120).
+    * If you get a strange "can't combine user with prefix" error, read [this](http://stackoverflow.com/questions/4495120).
 * Install to a specific location: `python3 setup.py install --prefix=$HOME/.local`
 * Install with pip (local copy): `pip3 install path/to/Porechop`
 * Install with pip (from GitHub): `pip3 install git+https://github.com/rrwick/Porechop.git`
@@ -64,7 +66,7 @@ Notes:
 
 ### Build and run without installation
 
-By simply running `make` in Porechop's directory, you can compile the C++ components but not install an executables. The program can then be executed by directly calling the `porechop-runner.py` script.
+By simply running `make` in Porechop's directory, you can compile the C++ components but not install an executable. The program can then be executed by directly calling the `porechop-runner.py` script.
 
 ```bash
 git clone https://github.com/rrwick/Porechop.git
@@ -103,7 +105,7 @@ __Got a big server?__<br>
 
 ### Find matching adapter sets
  
-Porechop first aligns a subset of reads (default 1000 reads, change with `--check_reads`) to all known adapter sets. Adapter sets with at least one high identity match (default 90%, change with `--adapter_threshold`) are deemed present in the sample.
+Porechop first aligns a subset of reads (default 10000 reads, change with `--check_reads`) to all known adapter sets. Adapter sets with at least one high identity match (default 90%, change with `--adapter_threshold`) are deemed present in the sample.
 
 Identity in this step is measured over the full length of the adapter. E.g. in order to qualify for a 90% match, an adapter could be present at 90% identity over its full length, or it could be present at 100% identity over 90% of its length, but a 90% identity match over 90% of the adapter length would not be sufficient.
 
@@ -114,7 +116,7 @@ The [alignment scoring scheme](http://seqan.readthedocs.io/en/master/Tutorial/Da
 
 The first and last bases in each read (default 100 bases, change with `--end_size`) are aligned to each present adapter set. When a long enough (default 4, change with `--min_trim_size`) and strong enough (default 75%, change with `--end_threshold`) match is found, the read is trimmed. A few extra bases (default 2, change with `--extra_end_trim`) past the adapter match are removed as well to ensure it's all removed.
 
-Identity in this step is measured over the aligned part of the adapter, not its full length. E.g. if the last 5 bases of an adapter exactly match the first 5 bases of a read, that counts as a 100% identity match.
+Identity in this step is measured over the _aligned part_ of the adapter, not its full length. E.g. if the last 5 bases of an adapter exactly match the first 5 bases of a read, that counts as a 100% identity match and those bases will be trimmed off. This allows Porechop to effectively trim partially present barcodes.
 
 The default `--end_threshold` is low (75%) because false positives (trimming off some sequence that wasn't really an adapter) shouldn't be too much of a problem with long reads, as only a tiny fraction of the read is lost.
 
@@ -123,7 +125,7 @@ The default `--end_threshold` is low (75%) because false positives (trimming off
 
 The entirety of each read is aligned to the present adapter sets to spot cases where an adapter is in the middle of the read, indicating a chimera. When a strong enough match is found (default 85%, change with `--middle_threshold`), the read is split. If the resulting parts are too short (default less than 1000 bp, change with `--min_split_read_size`), they are discarded.
 
-The default `--middle_threshold` (85%) is higher than the default `--end_threshold` (75%) because false positives in this step (splitting a read that is not chimeric) could be more problematic than false positives in the end trimming step.
+The default `--middle_threshold` (85%) is higher than the default `--end_threshold` (75%) because false positives in this step (splitting a read that is not chimeric) could be more problematic than false positives in the end trimming step. If false negatives (failing to split a chimera) are worse for you than false positives (splitting a non-chimera), you should reduce this threshold (e.g. `--middle_threshold 70`).
 
 Extra bases are also removed next to the hit, and how many depends on the side of the adapter. If we find an adapter that's expected at the start of a read, it's likely that what follows is good sequence but what precedes it may not be. Therefore, a few bases are trimmed after the adapter (default 10, change with `--extra_middle_trim_good_side`) and more bases are trimmed before the adapter (default 100, change with `--extra_middle_trim_bad_side`). If the found adapter is one we'd expect at the end of the read, then the "good side" is before the adapter and the "bad side" is after the adapter.
 
@@ -155,9 +157,9 @@ Porechop looks for barcodes at the start and end of each read. If the best start
 Usage examples:
 * __Default settings__:<br>
 `porechop -i input_reads.fastq.gz -b output_dir`
-* __Stringent binning__ (more reads in 'none' bin but low risk of misclassified reads):<br>
+* __Stringent binning__ (more reads in "none" bin but low risk of misclassified reads):<br>
 `porechop -i input_reads.fastq.gz -b output_dir --barcode_threshold 85 --require_two_barcodes`
-* __Lenient binning__ (fewer reads in 'none' bin but higher risk of misclassification):<br>
+* __Lenient binning__ (fewer reads in "none" bin but higher risk of misclassification):<br>
 `porechop -i input_reads.fastq.gz -b output_dir --barcode_threshold 60 --barcode_diff 1`
 
 
@@ -165,7 +167,7 @@ Usage examples:
 
 If Porechop is run with the output file specified using `-o`, it will display progress info to stdout. It will try to deduce the format of the output reads using the output filename (can handle `.fastq`, `.fastq.gz`, `.fasta` and `.fasta.gz`). The `--format` option can be used to override this automatic detection.
 
-Alternately, you can run Porechop with `-b` which specifies a directory for barcode bins. Porechop will then make separate read files in this directory for each barcode sequence (see [Barcode demultiplexing](#barcode-demultiplexing) for more details on the process). The files will be named using the barcode name or 'none' if no barcode call was made (e.g. `NB01.fastq.gz`, `NB02.fastq.gz`, `none.fastq.gz`). The reads will be outputted in either FASTA or FASTQ format, as determined by the input read format or the `--format` option, and are always gzipped.
+Alternately, you can run Porechop with `-b` which specifies a directory for barcode bins. Porechop will then make separate read files in this directory for each barcode sequence (see [Barcode demultiplexing](#barcode-demultiplexing) for more details on the process). The files will be named using the barcode name or "none" if no barcode call was made (e.g. `NB01.fastq.gz`, `NB02.fastq.gz`, `none.fastq.gz`). The reads will be outputted in either FASTA or FASTQ format, as determined by the input read format or the `--format` option, and are always gzipped.
 
 If Porechop is run without `-o` or `-b`, then it will output the trimmed reads to stdout and print its progress info to stderr. The output format of the reads will be FASTA/FASTQ based on the input reads, or else can be specified using `--format`.
 
