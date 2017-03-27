@@ -353,6 +353,7 @@ class NanoporeRead(object):
                          self.second_best_end_barcode[1] + barcode_diff)
         start_end_match = (self.best_start_barcode[0] == self.best_end_barcode[0])
 
+
         try:
             if require_two_barcodes:  # user set --require_two_barcodes
                 assert (start_over_threshold and end_over_threshold and
@@ -370,7 +371,7 @@ class NanoporeRead(object):
                     self.barcode_call = self.best_start_barcode[0]
                 elif start_over_threshold:  # only start is over threshold
                     self.barcode_call = self.best_start_barcode[0]
-                elif start_over_threshold:  # only end is over threshold
+                elif end_over_threshold:  # only end is over threshold
                     self.barcode_call = self.best_end_barcode[0]
 
         except AssertionError:
