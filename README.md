@@ -11,7 +11,7 @@ I have written Porechop for and tested it on 1D Nanopore reads. Its performance 
 * [Installation](#installation)
     * [Install from source](#install-from-source)
     * [Build and run without installation](#build-and-run-without-installation)
-* [Quick usage](#quick-usage)
+* [Quick usage examples](#quick-usage-examples)
 * [How it works](#how-it-works)
     * [Find matching adapter sets](#find-matching-adapter-sets)
     * [Trim adapters from read ends](#trim-adapters-from-read-ends)
@@ -74,19 +74,19 @@ make
 ```
 
 
-# Quick usage
+# Quick usage examples
 
-__All you really need to know:__<br>
+__Basic adapter trimming:__<br>
 `porechop -i input_reads.fastq.gz -o output_reads.fastq.gz`
+
+__Demultiplex barcoded reads:__<br>
+`porechop -i input_reads.fastq.gz -b output_dir`
 
 __Trimmed reads to stdout, if you prefer:__<br>
 `porechop -i input_reads.fastq.gz > output_reads.fastq`
 
 __Throw out reads with middle adapters (instead of splitting them):__<br>
 `porechop -i input_reads.fastq.gz -o output_reads.fastq.gz --discard_middle`
-
-__Demultiplex barcoded reads:__<br>
-`porechop -i input_reads.fastq.gz -b output_dir`
 
 __Also works with FASTA:__<br>
 `porechop -i input_reads.fasta -o output_reads.fasta`
@@ -146,18 +146,18 @@ SEQUENCE_1 belongs in the NB01 bin and SEQUENCE_2 belongs in the NB02 bin, so wh
 
 ### Barcode demultiplexing
 
-In addition to trimming barcodes off reads, Porechop can demultiplex the reads into bins based on which barcode was found. This is done by using the `-b` option, which specifies an output directory for the trimmed reads (each barcode in a separate file).
+Porechop can also demultiplex the reads into bins based on which barcode was found. This is done by using the `-b` option, which specifies an output directory for the trimmed reads (each barcode in a separate file), instead of `-o`.
 
-Reads are only assigned to a barcode bin if the barcode match is strong enough (default 75%, change with `--barcode_threshold`) and sufficiently better than the second-best barcode match (default 5% better, change with `--barcode_diff`). E.g. with default settings, if barcode NB01 was found at 79% identity and NB02 was found at 76% identity, the read will not be assigned to a barcode bin because the results were too close. But if you used `--barcode_diff 1`, then that read would be assigned to the NB01 bin.
+Reads are only assigned to a barcode bin if the match is strong enough (default 75%, change with `--barcode_threshold`) and sufficiently better than the second-best barcode match (default 5% better, change with `--barcode_diff`). E.g. with default settings, if barcode NB01 was found at 79% identity and NB02 was found at 76% identity, the read will not be assigned to a barcode bin because the results were too close. But if you used `--barcode_diff 1`, then that read _would_ be assigned to the NB01 bin.
 
-Porechop looks for barcodes are the start and end of each read. If the best match at the start is different from the best match at the end, then the read will not be in a barcode bin (might indicate a chimeric read). By default, Porechop will bin reads where only one barcode match is found (e.g. NB01 at the read start, no barcode at the read end). If you use the `--require_two_barcodes` option, Porechop will be more stringent and only assign reads to a barcode bin which have a barcode match at their start _and_ end. Also, the `--discard_middle` option is always active when demultiplexing barcoded reads (because the pieces of chimeric reads likely belong in separate bins).
+Porechop looks for barcodes at the start and end of each read. If the best start-read match is different from the best end-read match, then the read will not be put in a barcode bin (this could be caused by a chimeric read). By default, Porechop will bin reads where only one barcode match is found (e.g. NB01 at the read start, nothing at the read end). If you use the `--require_two_barcodes` option, Porechop will be more stringent and only assign reads to a barcode bin which have a barcode match at their start _and_ end. Also, the `--discard_middle` option is always active when demultiplexing barcoded reads (because the pieces of chimeric reads may belong in separate bins).
 
 Usage examples:
-* __Default options__:<br>
+* __Default settings__:<br>
 `porechop -i input_reads.fastq.gz -b output_dir`
-* __Stringent binning__ (more reads in 'none' bin but fewer misclassified reads):<br>
+* __Stringent binning__ (more reads in 'none' bin but low risk of misclassified reads):<br>
 `porechop -i input_reads.fastq.gz -b output_dir --barcode_threshold 85 --require_two_barcodes`
-* __Lenient binning__ (fewer reads in 'none' bin but more misclassified reads):<br>
+* __Lenient binning__ (fewer reads in 'none' bin but higher risk of misclassification):<br>
 `porechop -i input_reads.fastq.gz -b output_dir --barcode_threshold 60 --barcode_diff 1`
 
 
@@ -180,6 +180,11 @@ Whether or not `-o` or `-b` is used, the `--verbosity` option will change the ou
 If you call Porechop with `--verbosity 2`, then it will display the start/end of each read show the trimming in colour. Red indicates the adapter sequence and yellow indicates additional trimmed bases:
 
 <p align="center"><img src="misc/end_trimming.png" alt="End trimming"></p>
+
+
+If you are [demultiplexing barcodes](#barcode-demultiplexing), then this output will also show the barcodes found at the start/end of each read, along with the final call for the read's bin:
+
+<p align="center"><img src="misc/verbose_barcodes.png" alt="Barcodes"></p>
 
 
 The same colour scheme is used for middle adapters, but only reads with a positive hit are displayed:
