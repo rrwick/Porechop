@@ -50,14 +50,16 @@ class TestOneAdapterSet(unittest.TestCase):
 
     def test_verbosity_1_output(self):
         out, err = self.run_command('porechop -i INPUT -o OUTPUT.fastq --verbosity 1')
-        self.assertTrue('Trimming SQK-NSK007 adapters from read ends' in out)
+        self.assertTrue('Trimming adapters from read ends' in out)
+        self.assertTrue('SQK-NSK007_Y_Top:' in out)
+        self.assertTrue('SQK-NSK007_Y_Bottom:' in out)
         self.assertTrue('4 / 9 reads' in out)
         self.assertTrue('3 / 9 reads' in out)
         self.assertEqual(err, '')
 
     def test_verbosity_2_output(self):
         out, err = self.run_command('porechop -i INPUT -o OUTPUT.fastq --verbosity 2')
-        self.assertTrue('Trimming SQK-NSK007 adapters from read ends' in out)
+        self.assertTrue('Trimming adapters from read ends' in out)
         self.assertTrue('4 / 9 reads' in out)
         self.assertTrue('3 / 9 reads' in out)
         self.assertTrue('CGCACCTCTCCCCTCTGCGTCCTAGGCACTAGATCCAAACCTAGTTCGCCTGAAATTTACTGATGCTAGACCG'
@@ -67,7 +69,9 @@ class TestOneAdapterSet(unittest.TestCase):
 
     def test_piped_output(self):
         out, err = self.run_command('porechop -i INPUT')
-        self.assertTrue('Trimming SQK-NSK007 adapters from read ends' in err)
+        self.assertTrue('Trimming adapters from read ends' in err)
+        self.assertTrue('SQK-NSK007_Y_Top:' in err)
+        self.assertTrue('SQK-NSK007_Y_Bottom:' in err)
         self.assertTrue('4 / 9 reads' in err)
         self.assertTrue('3 / 9 reads' in err)
         self.assertTrue('@1\n' in out)
@@ -632,7 +636,9 @@ class TestTwoAdapterSets(unittest.TestCase):
         When only two reads are checked, only one adapter set is found.
         """
         out, _ = self.run_command('porechop -i INPUT -o OUTPUT.fastq --check_reads 2')
-        self.assertTrue('Trimming SQK-MAP006 adapters' in out)
+        self.assertTrue('Trimming adapters' in out)
+        self.assertTrue('SQK-MAP006_Y_Top_SK63:' in out)
+        self.assertTrue('SQK-MAP006_Y_Bottom_SK64:' in out)
         trimmed_reads, read_type = self.load_trimmed_reads()
         read_1 = [x for x in trimmed_reads if x[0] == '1'][0]
         self.assertEqual(len(read_1[1]), 10000)
@@ -646,7 +652,11 @@ class TestTwoAdapterSets(unittest.TestCase):
         When three reads are checked, both adapter sets are found.
         """
         out, _ = self.run_command('porechop -i INPUT -o OUTPUT.fastq --check_reads 3')
-        self.assertTrue('Trimming SQK-MAP006, SQK-NSK007 adapters' in out)
+        self.assertTrue('Trimming adapters' in out)
+        self.assertTrue('SQK-MAP006_Y_Top_SK63:' in out)
+        self.assertTrue('SQK-MAP006_Y_Bottom_SK64:' in out)
+        self.assertTrue('SQK-NSK007_Y_Top:' in out)
+        self.assertTrue('SQK-NSK007_Y_Bottom:' in out)
         trimmed_reads, read_type = self.load_trimmed_reads()
         read_1 = [x for x in trimmed_reads if x[0] == '1'][0]
         self.assertEqual(len(read_1[1]), 10000)
