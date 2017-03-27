@@ -49,6 +49,7 @@ Running the `setup.py` script will compile the C++ components of Porechop and in
 git clone https://github.com/rrwick/Porechop.git
 cd Porechop
 python3 setup.py install
+porechop -h
 ```
 
 Notes:
@@ -58,6 +59,7 @@ Notes:
 * Install to a specific location: `python3 setup.py install --prefix=$HOME/.local`
 * Install with pip (local copy): `pip3 install path/to/Porechop`
 * Install with pip (from GitHub): `pip3 install git+https://github.com/rrwick/Porechop.git`
+* Porechop includes `ez_setup.py` for users who don't have [setuptools](https://pypi.python.org/pypi/setuptools) installed, though that script is [deprecated](https://github.com/pypa/setuptools/issues/581). So if you run into any installation problems, make sure setuptools is installed on your computer: `pip3 install setuptools`
 
 
 ### Build and run without installation
@@ -68,6 +70,7 @@ By simply running `make` in Porechop's directory, you can compile the C++ compon
 git clone https://github.com/rrwick/Porechop.git
 cd Porechop
 make
+./porechop-runner.py -h
 ```
 
 
