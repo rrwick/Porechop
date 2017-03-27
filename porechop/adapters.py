@@ -33,9 +33,12 @@ class Adapter(object):
         return 'barcod' in self.name  # will catch 'barcode' and 'barcoding'
 
     def get_barcode_name(self):
-        start_name = self.start_sequence[0]
-        end_name = self.end_sequence[0]
-        barcode_name = end_name if len(end_name) < len(start_name) else start_name
+        """
+        Gets the barcode name for the output files. We want a concise name, so it looks at all
+        options and chooses the shortest.
+        """
+        possible_names = [self.name, self.start_sequence[0], self.end_sequence[0]]
+        barcode_name = sorted(possible_names, key=lambda x: len(x))[0]
         return barcode_name.replace(' ', '_')
 
 

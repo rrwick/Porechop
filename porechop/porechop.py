@@ -401,7 +401,7 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
             barcode_files[barcode_name].write(read_str)
             barcode_read_counts[barcode_name] += 1
             barcode_base_counts[barcode_name] += read.seq_length_with_start_end_adapters_trimmed()
-        table = [['Barcode', 'Reads', 'Total bases', 'File']]
+        table = [['Barcode', 'Reads', 'Bases', 'File']]
 
         for barcode_name in sorted(barcode_files.keys()):
             barcode_files[barcode_name].close()
@@ -419,7 +419,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
             print('')
             print(bold_underline('Saving trimmed reads to barcode-specific files'), flush=True,
                   file=print_dest)
-            print_table(table, print_dest, alignments='LRRL')
+            print_table(table, print_dest, alignments='LRRL', max_col_width=60, col_separation=2)
+            print('')
 
     # Output to all reads to stdout.
     elif output is None:
