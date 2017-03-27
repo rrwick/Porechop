@@ -1,7 +1,8 @@
-<p align="center"><img src="misc/porechop_logo_guillotine.png" alt="Porechop" width="600"></p>
+<p align="center"><img src="misc/porechop_logo_knife.png" alt="Porechop" width="600"></p>
 
 Porechop is a tool for finding and removing adapters from [Oxford Nanopore](https://nanoporetech.com/) reads. Adapters on the ends of reads are trimmed off, and when a read has an adapter in its middle, it is treated as chimeric and chopped into separate reads. Porechop performs thorough alignments to effectively find adapters, even at low sequence identity.
 
+I have written Porechop for and tested it on 1D Nanopore reads. Its performance on 2D or 1D<sup>2</sup> reads is unknown, so use with caution on those datasets!
 
 
 # Table of contents
@@ -16,6 +17,7 @@ Porechop is a tool for finding and removing adapters from [Oxford Nanopore](http
     * [Trim adapters from read ends](#trim-adapters-from-read-ends)
     * [Split reads with internal adapters](#split-reads-with-internal-adapters)
     * [Discard reads with internal adapters](#discard-reads-with-internal-adapters)
+    * [Barcode demultiplexing](#barcode-demultiplexing)
     * [Output](#output)
     * [Verbose output](#verbose-output)
 * [Known adapters](#known-adapters)
@@ -30,7 +32,8 @@ Porechop is a tool for finding and removing adapters from [Oxford Nanopore](http
 * Linux or macOS
 * [Python](https://www.python.org/) 3.4 or later
 * C++ compiler
-    * Recent versions of [GCC](https://gcc.gnu.org/), [Clang](http://clang.llvm.org/) and [ICC](https://software.intel.com/en-us/c-compilers) should all work (C++14 support is required).
+    * If you're using [GCC](https://gcc.gnu.org/), version 4.9.1 or later is required (check with `g++ --version`).
+    * Recent versions of [Clang](http://clang.llvm.org/) and [ICC](https://software.intel.com/en-us/c-compilers) should also work (C++14 support is required).
 
 I haven't tried to make Porechop run on Windows, but it should be possible. If you have any success on this front, let me know and I'll add instructions to this README!
 
@@ -78,6 +81,9 @@ __Trimmed reads to stdout, if you prefer:__<br>
 
 __Throw out reads with middle adapters (instead of splitting them):__<br>
 `porechop -i input_reads.fastq.gz -o output_reads.fastq.gz --discard_middle`
+
+__Demultiplex barcoded reads:__<br>
+`porechop -i input_reads.fastq.gz -b output_dir`
 
 __Also works with FASTA:__<br>
 `porechop -i input_reads.fasta -o output_reads.fasta`
@@ -135,14 +141,33 @@ NB01_rev - SEQUENCE_1 - SQK-NSK007_Y_Top - NB02_rev -  SEQUENCE_2
 SEQUENCE_1 belongs in the NB01 bin and SEQUENCE_2 belongs in the NB02 bin, so while we could split the read, we would end up with contamination from another bin. Throwing the read out with `--discard_middle` might be the better option.
 
 
+### Barcode demultiplexing
+
+In addition to trimming barcodes off reads, Porechop can demultiplex the reads into bins based on which barcode was found. This is done by using the `-b` option, which specifies an output directory for the trimmed reads (each barcode in a separate file).
+
+Reads are only assigned to a barcode bin if the barcode match is strong enough (default 75%, change with `--barcode_threshold`) and sufficiently better than the second-best barcode match (default 5% better, change with `--barcode_diff`). E.g. with default settings, if barcode NB01 was found at 79% identity and NB02 was found at 76% identity, the read will not be assigned to a barcode bin because the results were too close. But if you used `--barcode_diff 1`, then that read would be assigned to the NB01 bin.
+
+Porechop looks for barcodes are the start and end of each read. If the best match at the start is different from the best match at the end, then the read will not be in a barcode bin (might indicate a chimeric read). By default, Porechop will bin reads where only one barcode match is found (e.g. NB01 at the read start, no barcode at the read end). If you use the `--require_two_barcodes` option, Porechop will be more stringent and only assign reads to a barcode bin which have a barcode match at their start _and_ end. Also, the `--discard_middle` option is always active when demultiplexing barcoded reads (because the pieces of chimeric reads likely belong in separate bins).
+
+Usage examples:
+* __Default options__:<br>
+`porechop -i input_reads.fastq.gz -b output_dir`
+* __Stringent binning__ (more reads in 'none' bin but fewer misclassified reads):<br>
+`porechop -i input_reads.fastq.gz -b output_dir --barcode_threshold 85 --require_two_barcodes`
+* __Lenient binning__ (fewer reads in 'none' bin but more misclassified reads):<br>
+`porechop -i input_reads.fastq.gz -b output_dir --barcode_threshold 60 --barcode_diff 1`
+
+
 ### Output
 
 If Porechop is run with the output file specified using `-o`, it will display progress info to stdout. It will try to deduce the format of the output reads using the output filename (can handle `.fastq`, `.fastq.gz`, `.fasta` and `.fasta.gz`). The `--format` option can be used to override this automatic detection.
 
-If Porechop is run without `-o`, then it will output the trimmed reads to stdout and print its progress info to stderr. The output format of the reads will be FASTA/FASTQ based on the input reads, or else can be specified using `--format`.
+Alternately, you can run Porechop with `-b` which specifies a directory for barcode bins. Porechop will then make separate read files in this directory for each barcode sequence (see [Barcode demultiplexing](#barcode-demultiplexing) for more details on the process). The files will be named using the barcode name or 'none' if no barcode call was made (e.g. `NB01.fastq.gz`, `NB02.fastq.gz`, `none.fastq.gz`). The reads will be outputted in either FASTA or FASTQ format, as determined by the input read format or the `--format` option, and are always gzipped.
 
-Whether or not `-o` is used, the `--verbosity` option will change the output of progress info:
-* `--verbosity 0` gives no output.
+If Porechop is run without `-o` or `-b`, then it will output the trimmed reads to stdout and print its progress info to stderr. The output format of the reads will be FASTA/FASTQ based on the input reads, or else can be specified using `--format`.
+
+Whether or not `-o` or `-b` is used, the `--verbosity` option will change the output of progress info:
+* `--verbosity 0` gives no progress output.
 * `--verbosity 1` (the default) gives summary info about end adapter trimming and shows all instances of middle adapter splitting.
 * `--verbosity 2` shows sequences and is described below.
 
@@ -177,7 +202,9 @@ If you know of any I missed, please let me know and I'll add them!
 
 ```
 usage: porechop-runner.py [-h] -i INPUT [-o OUTPUT] [--format {auto,fasta,fastq}] [-v VERBOSITY]
-                          [-t THREADS] [--version] [--adapter_threshold ADAPTER_THRESHOLD]
+                          [-t THREADS] [--version] [-b BARCODE_DIR]
+                          [--barcode_threshold BARCODE_THRESHOLD] [--barcode_diff BARCODE_DIFF]
+                          [--require_two_barcodes] [--adapter_threshold ADAPTER_THRESHOLD]
                           [--check_reads CHECK_READS] [--scoring_scheme SCORING_SCHEME]
                           [--end_size END_SIZE] [--min_trim_size MIN_TRIM_SIZE]
                           [--extra_end_trim EXTRA_END_TRIM] [--end_threshold END_THRESHOLD]
@@ -206,6 +233,24 @@ Main options:
   -t THREADS, --threads THREADS    Number of threads to use for adapter alignment (default: 8)
   --version                        show program's version number and exit
 
+Barcode binning settings:
+  Control the binning of reads based on barcodes (i.e. barcode demultiplexing)
+
+  -b BARCODE_DIR, --barcode_dir BARCODE_DIR
+                                   Reads will be binned based on their barcode and saved to separate
+                                   files in this directory (incompatible with --output)
+  --barcode_threshold BARCODE_THRESHOLD
+                                   A read must have at least this percent identity to a barcode to be
+                                   binned (default: 75.0)
+  --barcode_diff BARCODE_DIFF      If the difference between a read's best barcode identity and its
+                                   second-best barcode identity is less than this value, it will not be
+                                   put in a barcode bin (to exclude cases which are too close to call)
+                                   (default: 5.0)
+  --require_two_barcodes           Reads will only be put in barcode bins if they have a strong hit for
+                                   the barcode on both their start and end (default: a read can be
+                                   binned with only a single barcode alignment, assuming no
+                                   contradictory barcode alignments exist at the other end)
+
 Adapter search settings:
   Control how the program determines which adapter sets are present
 
@@ -213,7 +258,7 @@ Adapter search settings:
                                    An adapter set has to have at least this percent identity to be
                                    labelled as present and trimmed off (0 to 100) (default: 90.0)
   --check_reads CHECK_READS        This many reads will be aligned to all possible adapters to
-                                   determine which adapter sets are present (default: 1000)
+                                   determine which adapter sets are present (default: 10000)
   --scoring_scheme SCORING_SCHEME  Comma-delimited string of alignment scores: match,mismatch, gap
                                    open, gap extend (default: 3,-6,-5,-2)
 
@@ -232,7 +277,8 @@ Middle adapter settings:
   Control the splitting of read from middle adapters
 
   --discard_middle                 Reads with middle adapters will be discarded (default: reads with
-                                   middle adapters are split)
+                                   middle adapters are split) (this option is on by default when
+                                   outputting reads into barcode bins)
   --middle_threshold MIDDLE_THRESHOLD
                                    Adapters in the middle of reads must have at least this percent
                                    identity to be found (0 to 100) (default: 85.0)
