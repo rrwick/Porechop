@@ -4,7 +4,7 @@ Porechop is a tool for finding and removing adapters from [Oxford Nanopore](http
 
 Porechop also supports demultiplexing of Nanopore reads that were barcoded with the [Native Barcoding Kit](https://store.nanoporetech.com/native-barcoding-kit-1d.html).
 
-I have written Porechop for and tested it on 1D Nanopore reads. Its performance is unknown on 2D or 1D<sup>2</sup> reads, so use with caution on those datasets!
+I have written Porechop for, and tested it on, 1D Nanopore reads. Its performance is unknown on 2D or 1D<sup>2</sup> reads, so use with caution on those datasets!
 
 
 # Table of contents
@@ -307,9 +307,9 @@ Middle adapter settings:
 
 # Acknowledgements
 
-Porechop was inspired by (and largely coded during) [Porecamp Australia 2017](https://porecamp-au.github.io/). Thanks to the organisers and attendees, who helped me realise that a Nanopore adapter trimmer might be a useful tool!
+Porechop was inspired by (and largely coded during) [Porecamp Australia 2017](https://porecamp-au.github.io/). Thanks to the organisers and attendees who helped me realise that a Nanopore adapter trimmer might be a useful tool!
 
-Also, I'd like to thank the [SeqAn](https://www.seqan.de/) developers for their great library (Porechop uses SeqAn to perform its alignments).
+Also I'd like to thank the [SeqAn](https://www.seqan.de/) developers for their great library (Porechop uses SeqAn to perform its alignments).
 
 And of course, many thanks to [Kat Holt](https://holtlab.net/) and [Louise Judd](https://scholar.google.com.au/citations?user=eO22mYUAAAAJ&hl=en) for keeping me well supplied with Nanopore reads!
 
