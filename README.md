@@ -32,7 +32,7 @@ I have written Porechop for, and tested it on, 1D Nanopore reads. Its performanc
 # Requirements
 
 * Linux or macOS
-* [Python](https://www.python.org/) 3.4 or later
+* [Python](https://www.python.org/) 2.7, 3.4 or later
 * C++ compiler
     * If you're using [GCC](https://gcc.gnu.org/), version 4.9.1 or later is required (check with `g++ --version`).
     * Recent versions of [Clang](http://clang.llvm.org/) and [ICC](https://software.intel.com/en-us/c-compilers) should also work (C++14 support is required).
@@ -56,12 +56,12 @@ porechop -h
 
 Notes:
 * If the last command complains about permissions, you may need to run it with `sudo`.
-* Install just for your user: `python3 setup.py install --user`
+* Install just for your user: `python setup.py install --user`
     * If you get a strange "can't combine user with prefix" error, read [this](http://stackoverflow.com/questions/4495120).
-* Install to a specific location: `python3 setup.py install --prefix=$HOME/.local`
-* Install with pip (local copy): `pip3 install path/to/Porechop`
-* Install with pip (from GitHub): `pip3 install git+https://github.com/rrwick/Porechop.git`
-* Porechop includes `ez_setup.py` for users who don't have [setuptools](https://pypi.python.org/pypi/setuptools) installed, though that script is [deprecated](https://github.com/pypa/setuptools/issues/581). So if you run into any installation problems, make sure setuptools is installed on your computer: `pip3 install setuptools`
+* Install to a specific location: `python setup.py install --prefix=$HOME/.local`
+* Install with pip (local copy): `pip install path/to/Porechop`
+* Install with pip (from GitHub): `pip install git+https://github.com/rrwick/Porechop.git`
+* Porechop includes `ez_setup.py` for users who don't have [setuptools](https://pypi.python.org/pypi/setuptools) installed, though that script is [deprecated](https://github.com/pypa/setuptools/issues/581). So if you run into any installation problems, make sure setuptools is installed on your computer: `pip install setuptools`
 
 
 ### Build and run without installation
