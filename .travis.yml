@@ -9,10 +9,16 @@ python:
   - "3.7-dev" # 3.7 development branch
   - "nightly" # currently points to 3.7-dev
 sudo: required
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install --upgrade g++
-  - g++ --version
+script:
+  - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
+  - gcc --version
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - gcc-5
+    - g++-5
 install: "python setup.py install"
 # # command to run tests
 script: python -m unittest discover
