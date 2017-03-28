@@ -1,0 +1,19 @@
+language: python
+python:
+  - "2.7"
+  - "3.4"
+  - "3.5"
+  - "3.5-dev" # 3.5 development branch
+  - "3.6"
+  - "3.6-dev" # 3.6 development branch
+  - "3.7-dev" # 3.7 development branch
+  - "nightly" # currently points to 3.7-dev
+sudo: required
+before_install:
+  - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  - sudo apt-get update -qq
+  - sudo apt-get install -y gcc-5 g++-5
+  - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-5 60 --slave /usr/bin/g++ g++ /usr/bin/g++-5
+install: "python setup.py install"
+# # command to run tests
+script: python -m unittest discover

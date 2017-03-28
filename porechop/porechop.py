@@ -14,6 +14,7 @@ details. You should have received a copy of the GNU General Public License along
 not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import print_function, absolute_import
 import argparse
 import os
 import sys
@@ -21,11 +22,11 @@ import subprocess
 import multiprocessing
 from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
-from .misc import load_fasta_or_fastq, print_table, red, bold_underline, check_file_exists, \
+from porechop.misc import load_fasta_or_fastq, print_table, red, bold_underline, check_file_exists, \
     MyHelpFormatter, int_to_str
-from .adapters import ADAPTERS
-from .nanopore_read import NanoporeRead
-from .version import __version__
+from porechop.adapters import ADAPTERS
+from porechop.nanopore_read import NanoporeRead
+from porechop.version import __version__
 
 
 def main():
@@ -69,9 +70,9 @@ def get_arguments():
     """
     default_threads = min(multiprocessing.cpu_count(), 16)
 
-    parser = argparse.ArgumentParser(description='Porechop: a tool for finding adapters in Oxford '
+    parser = argparse.ArgumentParser(description=('Porechop: a tool for finding adapters in Oxford '
                                                  'Nanopore reads, trimming them from the ends and '
-                                                 'splitting reads with internal adapters',
+                                                 'splitting reads with internal adapters'),
                                      formatter_class=MyHelpFormatter)
     main_group = parser.add_argument_group('Main options')
     main_group.add_argument('-i', '--input', required=True,
