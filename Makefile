@@ -10,7 +10,7 @@
 
 
 # CXX and CXXFLAGS can be overridden by the user.
-CXX         ?= g++-5
+CXX         ?= g++
 CXXFLAGS    ?= -Wall -Wextra -pedantic -march=native
 
 # These flags are required for the build to work.
