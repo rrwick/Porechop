@@ -36,6 +36,8 @@ def main():
                                                args.scoring_scheme_vals, args.print_dest,
                                                args.adapter_threshold, args.check_reads,
                                                args.threads)
+    if args.barcode_dir:
+        matching_sets = choose_barcoding_kit(matching_sets)
 
     display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
 
@@ -229,6 +231,25 @@ def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, 
             pool.map(align_adapter_set_one_arg, arg_list)
     return [x for x in ADAPTERS if x.best_start_or_end_score() >= adapter_threshold]
 
+
+def choose_barcoding_kit(adapter_sets):
+    """
+    If the user is sorting reads by barcode bin, choose one kit (native barcodes or PCR barcodes)
+    and ignore the other.
+    """
+    native_barcodes = 0
+    pcr_barcodes = 0
+    for adapter_set in ADAPTERS:
+        if 'Native bar' in adapter_set.name:
+            native_barcodes += 1
+        elif 'PCR bar' in adapter_set.name:
+            pcr_barcodes += 1
+    if native_barcodes > pcr_barcodes:
+        return [x for x in adapter_sets if 'PCR bar' not in x.name]
+    elif pcr_barcodes > native_barcodes:
+        return [x for x in adapter_sets if 'Native bar' not in x.name]
+    else:
+        return adapter_sets
 
 def display_adapter_set_results(matching_sets, verbosity, print_dest):
     if verbosity < 1:
