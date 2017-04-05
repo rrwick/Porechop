@@ -411,7 +411,11 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
             bin_filename_gz = bin_filename + '.gz'
             if os.path.isfile(bin_filename_gz):
                 os.remove(bin_filename_gz)
-            subprocess.check_output('gzip ' + bin_filename, stderr=subprocess.STDOUT, shell=True)
+            try:
+                subprocess.check_output('gzip ' + bin_filename, stderr=subprocess.STDOUT,
+                                        shell=True)
+            except subprocess.CalledProcessError:
+                pass
             table_row = [barcode_name, int_to_str(barcode_read_counts[barcode_name]),
                          int_to_str(barcode_base_counts[barcode_name]), bin_filename_gz]
             table.append(table_row)
