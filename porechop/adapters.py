@@ -37,7 +37,9 @@ class Adapter(object):
         Gets the barcode name for the output files. We want a concise name, so it looks at all
         options and chooses the shortest.
         """
-        possible_names = [self.name, self.start_sequence[0], self.end_sequence[0]]
+        possible_names = [self.name, self.start_sequence[0]]
+        if self.end_sequence:
+            possible_names.append(self.end_sequence[0])
         barcode_name = sorted(possible_names, key=lambda x: len(x))[0]
         return barcode_name.replace(' ', '_')
 
@@ -95,6 +97,30 @@ ADAPTERS = [
                     start_sequence=('NB12_rev', 'AGGTTAATCCGATTCTGCTTCTTTCTACCTGCAGCACC'),
                     end_sequence=  ('NB12',     'GGTGCTGCAGGTAGAAAGAAGCAGAATCGGATTAACCT')),
 
+            Adapter('Rapid barcoding 1',
+                    start_sequence=('RB01',     'TATTGCTAAGAAAGTTGTCGGTGTCTTTGTGGTTTTCG')),
+            Adapter('Rapid barcoding 2',
+                    start_sequence=('RB02',     'TATTGCTTCGATTCCGTTTGTAGTCGTCTGTGTTTTCG')),
+            Adapter('Rapid barcoding 3',
+                    start_sequence=('RB03',     'TATTGCTGAGTCTTGTGTCCCAGTTACCAGGGTTTTCG')),
+            Adapter('Rapid barcoding 4',
+                    start_sequence=('RB04',     'TATTGCTTTCGGATTCTATCGTGTTTCCCTAGTTTTCG')),
+            Adapter('Rapid barcoding 5',
+                    start_sequence=('RB05',     'TATTGCTCTTGTCCAGGGTTTGTGTAACCTTGTTTTCG')),
+            Adapter('Rapid barcoding 6',
+                    start_sequence=('RB06',     'TATTGCTTTCTCGCAAAGGCAGAAAGTAGTCGTTTTCG')),
+            Adapter('Rapid barcoding 7',
+                    start_sequence=('RB07',     'TATTGCTGTGTTACCGTGGGAATGAATCCTTGTTTTCG')),
+            Adapter('Rapid barcoding 8',
+                    start_sequence=('RB08',     'TATTGCTTTCAGGGAACAAACCAAGTTACGTGTTTTCG')),
+            Adapter('Rapid barcoding 9',
+                    start_sequence=('RB09',     'TATTGCTAACTAGGCACAGCGAGTCTTGGTTGTTTTCG')),
+            Adapter('Rapid barcoding 10',
+                    start_sequence=('RB10',     'TATTGCTAAGCGTTGAAACCTTTGTCCTCTCGTTTTCG')),
+            Adapter('Rapid barcoding 11',
+                    start_sequence=('RB11',     'TATTGCTGTTTCATCTATCGGAGGGAATGGAGTTTTCG')),
+            Adapter('Rapid barcoding 12',
+                    start_sequence=('RB12',     'TATTGCTCAGGTAGAAAGAAGCAGAATCGGAGTTTTCG')),
 
             Adapter('PCR barcoding 1',
                     start_sequence=('BC01',     'GGTGCTGAAGAAAGTTGTCGGTGTCTTTGTGTTAACCT'),

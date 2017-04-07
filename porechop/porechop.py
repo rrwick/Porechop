@@ -238,18 +238,28 @@ def choose_barcoding_kit(adapter_sets):
     and ignore the other.
     """
     native_barcodes = 0
+    rapid_barcodes = 0
     pcr_barcodes = 0
-    for adapter_set in ADAPTERS:
+    for adapter_set in adapter_sets:
+        score = adapter_set.best_start_or_end_score()
         if 'Native bar' in adapter_set.name:
-            native_barcodes += 1
+            native_barcodes += score
+        if 'Rapid bar' in adapter_set.name:
+            rapid_barcodes += score
         elif 'PCR bar' in adapter_set.name:
-            pcr_barcodes += 1
-    if native_barcodes > pcr_barcodes:
-        return [x for x in adapter_sets if 'PCR bar' not in x.name]
-    elif pcr_barcodes > native_barcodes:
-        return [x for x in adapter_sets if 'Native bar' not in x.name]
+            pcr_barcodes += score
+    if native_barcodes > pcr_barcodes and native_barcodes > rapid_barcodes:
+        return [x for x in adapter_sets
+                if 'PCR bar' not in x.name and 'Rapid bar' not in x.name]
+    elif pcr_barcodes > native_barcodes and pcr_barcodes > rapid_barcodes:
+        return [x for x in adapter_sets
+                if 'Native bar' not in x.name and 'Rapid bar' not in x.name]
+    elif rapid_barcodes > native_barcodes and rapid_barcodes > pcr_barcodes:
+        return [x for x in adapter_sets
+                if 'Native bar' not in x.name and 'PCR bar' not in x.name]
     else:
         return adapter_sets
+
 
 def display_adapter_set_results(matching_sets, verbosity, print_dest):
     if verbosity < 1:
@@ -276,12 +286,13 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
         print(bold_underline('Trimming adapters from read ends'),
               file=print_dest)
         name_len = max(max(len(x.start_sequence[0]) for x in matching_sets),
-                       max(len(x.end_sequence[0]) for x in matching_sets))
+                       max(len(x.end_sequence[0]) if x.end_sequence else 0 for x in matching_sets))
         for matching_set in matching_sets:
             print('  ' + matching_set.start_sequence[0].rjust(name_len) + ': ' +
                   red(matching_set.start_sequence[1]), file=print_dest)
-            print('  ' + matching_set.end_sequence[0].rjust(name_len) + ': ' +
-                  red(matching_set.end_sequence[1]), file=print_dest)
+            if matching_set.end_sequence:
+                print('  ' + matching_set.end_sequence[0].rjust(name_len) + ': ' +
+                      red(matching_set.end_sequence[1]), file=print_dest)
         print('', file=print_dest)
 
     # If single-threaded, do the work in a simple loop.
@@ -350,11 +361,16 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
     adapters = []
     for matching_set in matching_sets:
         adapters.append(matching_set.start_sequence)
-        if matching_set.end_sequence[1] != matching_set.start_sequence[1]:
+        if matching_set.end_sequence and \
+                matching_set.end_sequence[1] != matching_set.start_sequence[1]:
             adapters.append(matching_set.end_sequence)
 
-    start_sequence_names = set(x.start_sequence[0] for x in matching_sets)
-    end_sequence_names = set(x.end_sequence[0] for x in matching_sets)
+    start_sequence_names = set()
+    end_sequence_names = set()
+    for matching_set in matching_sets:
+        start_sequence_names.add(matching_set.start_sequence[0])
+        if matching_set.end_sequence:
+            end_sequence_names.add(matching_set.end_sequence[0])
 
     # If single-threaded, do the work in a simple loop.
     if threads == 1:

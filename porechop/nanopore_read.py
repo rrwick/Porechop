@@ -131,10 +131,11 @@ class NanoporeRead(object):
         score, _, _, _ = align_adapter(read_seq_start, adapter_set.start_sequence[1],
                                        scoring_scheme_vals)
         adapter_set.best_start_score = max(adapter_set.best_start_score, score)
-        read_seq_end = self.seq[-end_size:]
-        score, _, _, _ = align_adapter(read_seq_end, adapter_set.end_sequence[1],
-                                       scoring_scheme_vals)
-        adapter_set.best_end_score = max(adapter_set.best_end_score, score)
+        if adapter_set.end_sequence:
+            read_seq_end = self.seq[-end_size:]
+            score, _, _, _ = align_adapter(read_seq_end, adapter_set.end_sequence[1],
+                                           scoring_scheme_vals)
+            adapter_set.best_end_score = max(adapter_set.best_end_score, score)
 
     def find_start_trim(self, adapters, end_size, extra_trim_size, end_threshold,
                         scoring_scheme_vals, min_trim_size, check_barcodes):
@@ -161,6 +162,8 @@ class NanoporeRead(object):
         """
         read_seq_end = self.seq[-end_size:]
         for adapter in adapters:
+            if not adapter.end_sequence:
+                continue
             full_score, partial_score, read_start, read_end = \
                 align_adapter(read_seq_end, adapter.end_sequence[1], scoring_scheme_vals)
             if partial_score > end_threshold and read_start != 0 and \
