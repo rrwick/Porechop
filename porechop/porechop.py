@@ -62,7 +62,7 @@ def main():
 
     output_reads(reads, args.format, args.output, read_type, args.verbosity,
                  args.discard_middle, args.min_split_read_size, args.print_dest,
-                 args.barcode_dir)
+                 args.barcode_dir, args.untrimmed)
 
 
 def get_arguments():
@@ -114,6 +114,8 @@ def get_arguments():
                                     'a read can be binned with only a single barcode alignment, '
                                     'assuming no contradictory barcode alignments exist at the '
                                     'other end)')
+    barcode_group.add_argument('--untrimmed', action='store_true',
+                               help='Demultiplex but do not trim reads, e.g. for use with nanopolish')
 
     adapter_search_group = parser.add_argument_group('Adapter search settings',
                                                      'Control how the program determines which '
@@ -409,7 +411,7 @@ def display_read_middle_trimming_summary(reads, discard_middle, verbosity, print
 
 
 def output_reads(reads, out_format, output, read_type, verbosity, discard_middle,
-                 min_split_size, print_dest, barcode_dir):
+                 min_split_size, print_dest, barcode_dir, untrimmed):
     if out_format == 'auto':
         if output is None:
             out_format = read_type.lower()
@@ -428,8 +430,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
         barcode_read_counts, barcode_base_counts = defaultdict(int), defaultdict(int)
         for read in reads:
             barcode_name = read.barcode_call
-            read_str = read.get_fasta(min_split_size, discard_middle) if out_format == 'fasta' \
-                else read.get_fastq(min_split_size, discard_middle)
+            read_str = read.get_fasta(min_split_size, discard_middle, untrimmed) if out_format == 'fasta' \
+                else read.get_fastq(min_split_size, discard_middle, untrimmed)
             if not read_str:
                 continue
             if barcode_name not in barcode_files:
