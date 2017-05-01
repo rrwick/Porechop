@@ -198,7 +198,7 @@ The same colour scheme is used for middle adapters, but only reads with a positi
 
 # Known adapters
 
-The known Nanopore adapters that Porechop looks for are defined in the [adapters.py](../blob/master/porechop/adapters.py) file.
+The known Nanopore adapters that Porechop looks for are defined in the [adapters.py](../master/porechop/adapters.py) file.
 
 They are:
 * SQK-MAP006
