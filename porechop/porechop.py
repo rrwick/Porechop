@@ -23,7 +23,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, check_file_exists, \
     MyHelpFormatter, int_to_str
-from .adapters import ADAPTERS
+from .adapters import ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter
 from .nanopore_read import NanoporeRead
 from .version import __version__
 
@@ -38,8 +38,10 @@ def main():
                                                args.threads)
     if args.barcode_dir:
         matching_sets = choose_barcoding_kit(matching_sets)
+    matching_sets = exclude_end_adapters_for_rapid(matching_sets)
 
     display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
+    matching_sets = add_full_barcode_adapter_sets(matching_sets)
 
     if matching_sets:
         check_barcodes = (args.barcode_dir is not None)
@@ -86,8 +88,8 @@ def get_arguments():
                                  'format will be chosen based on the output filename or the input '
                                  'read format')
     main_group.add_argument('-v', '--verbosity', type=int, default=1,
-                            help='Level of progress information: 0 = none, 1 = some, 2 = full '
-                                 ' - output will go to stdout if reads are saved to '
+                            help='Level of progress information: 0 = none, 1 = some, 2 = lots,'
+                                 '3 = full - output will go to stdout if reads are saved to '
                                  'a file and stderr if reads are printed to stdout')
     main_group.add_argument('-t', '--threads', type=int, default=default_threads,
                             help='Number of threads to use for adapter alignment')
@@ -131,7 +133,7 @@ def get_arguments():
 
     end_trim_group = parser.add_argument_group('End adapter settings',
                                                'Control the trimming of adapters from read ends')
-    end_trim_group.add_argument('--end_size', type=int, default=100,
+    end_trim_group.add_argument('--end_size', type=int, default=150,
                                 help='The number of base pairs at each end of the read which will '
                                      'be searched for adapter sequences')
     end_trim_group.add_argument('--min_trim_size', type=int, default=4,
@@ -139,7 +141,7 @@ def get_arguments():
     end_trim_group.add_argument('--extra_end_trim', type=int, default=2,
                                 help='This many additional bases will be removed next to adapters '
                                      'found at the ends of reads')
-    end_trim_group.add_argument('--end_threshold', type=float, default=75.0,
+    end_trim_group.add_argument('--end_threshold', type=float, default=70.0,
                                 help='Adapters at the ends of reads must have at least this '
                                      'percent identity to be removed (0 to 100)')
 
@@ -210,12 +212,14 @@ def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, 
     if verbosity > 0:
         print(bold_underline('Looking for known adapter sets'), flush=True, file=print_dest)
 
+    search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
+
     read_subset = reads[:check_reads]
 
     # If single-threaded, do the work in a simple loop.
     if threads == 1:
         for read in read_subset:
-            for adapter_set in ADAPTERS:
+            for adapter_set in search_adapters:
                 read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
 
     # If multi-threaded, use a thread pool.
@@ -226,56 +230,85 @@ def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, 
         with ThreadPool(threads) as pool:
             arg_list = []
             for read in read_subset:
-                for adapter_set in ADAPTERS:
+                for adapter_set in search_adapters:
                     arg_list.append((read, adapter_set, end_size, scoring_scheme_vals))
             pool.map(align_adapter_set_one_arg, arg_list)
-    return [x for x in ADAPTERS if x.best_start_or_end_score() >= adapter_threshold]
+    return [x for x in search_adapters if x.best_start_or_end_score() >= adapter_threshold]
 
 
 def choose_barcoding_kit(adapter_sets):
     """
-    If the user is sorting reads by barcode bin, choose one kit (native barcodes or PCR barcodes)
-    and ignore the other.
+    If the user is sorting reads by barcode bin, choose one barcode configuration (rev comp
+    barcodes at the start of the read or at the end of the read) and ignore the other.
     """
-    native_barcodes = 0
-    rapid_barcodes = 0
-    pcr_barcodes = 0
+    forward_barcodes = 0
+    reverse_barcodes = 0
     for adapter_set in adapter_sets:
         score = adapter_set.best_start_or_end_score()
-        if 'Native bar' in adapter_set.name:
-            native_barcodes += score
-        if 'Rapid bar' in adapter_set.name:
-            rapid_barcodes += score
-        elif 'PCR bar' in adapter_set.name:
-            pcr_barcodes += score
-    if native_barcodes > pcr_barcodes and native_barcodes > rapid_barcodes:
-        return [x for x in adapter_sets
-                if 'PCR bar' not in x.name and 'Rapid bar' not in x.name]
-    elif pcr_barcodes > native_barcodes and pcr_barcodes > rapid_barcodes:
-        return [x for x in adapter_sets
-                if 'Native bar' not in x.name and 'Rapid bar' not in x.name]
-    elif rapid_barcodes > native_barcodes and rapid_barcodes > pcr_barcodes:
-        return [x for x in adapter_sets
-                if 'Native bar' not in x.name and 'PCR bar' not in x.name]
+        if 'Barcode' in adapter_set.name and '(forward)' in adapter_set.name:
+            forward_barcodes += score
+        elif 'Barcode' in adapter_set.name and '(reverse)' in adapter_set.name:
+            reverse_barcodes += score
+    if forward_barcodes > reverse_barcodes:
+        return [x for x in adapter_sets if not ('Barcode' in x.name and '(reverse)' in x.name)]
+    elif reverse_barcodes > forward_barcodes:
+        return [x for x in adapter_sets if not ('Barcode' in x.name and '(forward)' in x.name)]
     else:
         return adapter_sets
+
+
+def exclude_end_adapters_for_rapid(matching_sets):
+    """
+    Rapid reads shouldn't have end adapters, so we don't want to look for them if this seems to be
+    a rapid read set.
+    """
+    if 'Rapid adapter' in [x.name for x in matching_sets]:
+        for s in matching_sets:
+            s.end_sequence = None
+    return matching_sets
 
 
 def display_adapter_set_results(matching_sets, verbosity, print_dest):
     if verbosity < 1:
         return
-    table = [['Set', 'Best %ID']]
+    table = [['Set', 'Best read start %ID', 'Best read end %ID']]
     row_colours = {}
     matching_set_names = [x.name for x in matching_sets]
-    for adapter_set in ADAPTERS:
-        score = adapter_set.best_start_or_end_score()
-        score = '%.1f' % score
-        table.append([adapter_set.name, score])
+    search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
+    for adapter_set in search_adapters:
+        start_score = '%.1f' % adapter_set.best_start_score
+        end_score = '%.1f' % adapter_set.best_end_score
+        table.append([adapter_set.name, start_score, end_score])
         if adapter_set.name in matching_set_names:
             row_colours[len(table) - 1] = 'green'
     if verbosity > 0:
-        print_table(table, print_dest, alignments='LR', row_colour=row_colours)
+        print_table(table, print_dest, alignments='LRR', row_colour=row_colours,
+                    fixed_col_widths=[35, 8, 8])
         print('\n', file=print_dest)
+
+
+def add_full_barcode_adapter_sets(matching_sets):
+    """
+    This function adds some new 'full' adapter sequences based on what was already found. For
+    example, if the ligation adapters and the reverse barcode adapters are found, it assumes we are
+    looking at a native barcoding run and so it adds the complete native barcoding adapter
+    sequences (with the barcode's upstream and downstream context included).
+    """
+    matching_set_names = [x.name for x in matching_sets]
+
+    for i in range(1, 97):
+
+        # Native barcode full sequences
+        if all(x in matching_set_names
+               for x in ['SQK-NSK007', 'Barcode ' + str(i) + ' (reverse)']):
+            matching_sets.append(make_full_native_barcode_adapter(i))
+
+        # Rapid barcode full sequences
+        if all(x in matching_set_names
+               for x in ['SQK-NSK007', 'Rapid', 'Barcode ' + str(i) + ' (forward)']):
+            matching_sets.append(make_full_rapid_barcode_adapter(i))
+
+    return matching_sets
 
 
 def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_trim_size,
@@ -304,8 +337,11 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
                                scoring_scheme_vals, min_trim_size, check_barcodes)
             if check_barcodes:
                 read.determine_barcode(barcode_threshold, barcode_diff, require_two_barcodes)
-            if verbosity > 1:
+            if verbosity == 2:
                 print(read.formatted_start_and_end_seq(end_size, extra_trim_size, check_barcodes),
+                      file=print_dest)
+            if verbosity > 2:
+                print(read.full_start_end_output(end_size, extra_trim_size, check_barcodes),
                       file=print_dest)
 
     # If multi-threaded, use a thread pool.
@@ -316,8 +352,10 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
             r.find_end_trim(a, b, c, d, e, f, g)
             if check_barcodes:
                 r.determine_barcode(h, i, j)
-            if v > 1:
+            if v == 2:
                 return r.formatted_start_and_end_seq(b, c, g)
+            if v > 2:
+                return r.full_start_end_output(b, c, g)
             else:
                 return ''
         with ThreadPool(threads) as pool:

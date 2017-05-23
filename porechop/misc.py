@@ -176,7 +176,8 @@ def load_fastq(fastq_filename):
 def print_table(table, print_dest, alignments='', max_col_width=30, col_separation=3, indent=2,
                 row_colour=None, sub_colour=None, row_extra_text=None, leading_newline=False,
                 subsequent_indent='', return_str=False, header_format='underline',
-                hide_header=False, fixed_col_widths=None, left_align_header=True):
+                hide_header=False, fixed_col_widths=None, left_align_header=True,
+                bottom_align_header=True):
     """
     Args:
         table: a list of lists of strings (one row is one list, all rows should be the same length)
@@ -195,9 +196,8 @@ def print_table(table, print_dest, alignments='', max_col_width=30, col_separati
         hide_header: if True, the header is not printed
         fixed_col_widths: a list to specify exact column widths (automatic if not used)
         left_align_header: if False, the header will follow the column alignments
-
-    Returns:
-        nothing (just prints the table)
+        bottom_align_header: if False, the header will align to the top, like other rows
+        verbosity: the table will only be logged if the logger verbosity is >= this value
     """
     column_count = len(table[0])
     table = [x[:column_count] for x in table]
@@ -210,7 +210,11 @@ def print_table(table, print_dest, alignments='', max_col_width=30, col_separati
         row_extra_text = {}
     if leading_newline:
         print('', file=print_dest)
-    alignments += 'L' * (column_count - len(alignments))  # Fill out with L, if incomplete
+
+    # Ensure the alignments string is the same length as the column count
+    alignments += 'L' * (column_count - len(alignments))
+    alignments = alignments[:column_count]
+
     if fixed_col_widths is not None:
         col_widths = fixed_col_widths
     else:
@@ -222,6 +226,7 @@ def print_table(table, print_dest, alignments='', max_col_width=30, col_separati
     indenter = ' ' * indent
     full_table_str = ''
     for i, row in enumerate(table):
+        row = [str(x) for x in row]
         if hide_header and i == 0:
             continue
 
@@ -235,12 +240,18 @@ def print_table(table, print_dest, alignments='', max_col_width=30, col_separati
             wrapper = textwrap.TextWrapper(subsequent_indent=subsequent_indent, width=max_col_width)
             wrapped_row = [wrapper.wrap(x) for x in row]
 
-        for j in range(max(len(x) for x in wrapped_row)):
+        row_rows = max(len(x) for x in wrapped_row)
+        if i == 0 and bottom_align_header:
+            wrapped_row = [[''] * (row_rows - len(x)) + x for x in wrapped_row]
+
+        for j in range(row_rows):
             row_line = [x[j] if j < len(x) else '' for x in wrapped_row]
             aligned_row = []
             for value, col_width, alignment in zip(row_line, col_widths, alignments):
                 if alignment == 'L' or (i == 0 and left_align_header):
                     aligned_row.append(value.ljust(col_width))
+                elif alignment == 'C':
+                    aligned_row.append(value.center(col_width))
                 else:
                     aligned_row.append(value.rjust(col_width))
             row_str = separator.join(aligned_row)
@@ -252,6 +263,8 @@ def print_table(table, print_dest, alignments='', max_col_width=30, col_separati
                 row_str = colour(row_str, row_colour[i])
             for text, colour_name in sub_colour.items():
                 row_str = row_str.replace(text, colour(text, colour_name))
+            if j < row_rows - 1 and UNDERLINE in row_str:
+                row_str = re.sub('\033\[4m', '', row_str)
             if return_str:
                 full_table_str += indenter + row_str + '\n'
             else:

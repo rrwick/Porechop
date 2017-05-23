@@ -30,6 +30,8 @@ class NanoporeRead(object):
 
         self.start_trim_amount = 0
         self.end_trim_amount = 0
+        self.start_adapter_alignments = []
+        self.end_adapter_alignments = []
 
         self.middle_adapter_positions = set()
         self.middle_trim_positions = set()
@@ -151,6 +153,8 @@ class NanoporeRead(object):
                     read_end - read_start >= min_trim_size:
                 trim_amount = read_end + extra_trim_size
                 self.start_trim_amount = max(self.start_trim_amount, trim_amount)
+                self.start_adapter_alignments.append((adapter, full_score, partial_score,
+                                                      read_start, read_end))
             if check_barcodes and adapter.is_barcode():
                 self.start_barcode_scores[adapter.get_barcode_name()] = full_score
 
@@ -170,6 +174,8 @@ class NanoporeRead(object):
                     read_end - read_start >= min_trim_size:
                 trim_amount = (end_size - read_start) + extra_trim_size
                 self.end_trim_amount = max(self.end_trim_amount, trim_amount)
+                self.end_adapter_alignments.append((adapter, full_score, partial_score,
+                                                    read_start, read_end))
             if check_barcodes and adapter.is_barcode():
                 self.end_barcode_scores[adapter.get_barcode_name()] = full_score
 
@@ -284,6 +290,30 @@ class NanoporeRead(object):
                          self.formatted_end_seq(end_size, extra_trim_size))
         return read_seq
 
+    def full_start_end_output(self, end_size, extra_trim_size, check_barcodes):
+        def get_alignment_string(a):
+            return a[0].name + ', full score=' + str(a[1]) + ', partial score=' + str(a[2]) + \
+                ', read position: ' + str(a[3]) + '-' + str(a[4])
+        output = self.name + '\n'
+        output += '  start: ' + self.formatted_start_seq(end_size, extra_trim_size) + '...\n'
+        if self.start_adapter_alignments:
+            output += '    start alignments:\n'
+            for a in self.start_adapter_alignments:
+                output += '      ' + get_alignment_string(a) + '\n'
+        output += '  end:   ...' + self.formatted_end_seq(end_size, extra_trim_size) + '\n'
+        if self.end_adapter_alignments:
+            output += '    end alignments:\n'
+            for a in self.end_adapter_alignments:
+                output += '      ' + get_alignment_string(a) + '\n'
+        if check_barcodes:
+            start_name, start_id = self.best_start_barcode
+            end_name, end_id = self.best_end_barcode
+            output += '  barcode call: ' + self.barcode_call + '\n'
+            output += '    start barcode: ' + start_name + ' (' + '%.1f' % start_id + '%)\n'
+            output += '    end barcode: ' + end_name + ' (' + '%.1f' % end_id + '%)\n'
+        output += '\n'
+        return output
+
     def formatted_middle_seq(self):
         """
         If a middle adapter was found, this returns the relevant part of the read sequence, with
@@ -355,7 +385,6 @@ class NanoporeRead(object):
         end_good_diff = (self.best_end_barcode[1] >=
                          self.second_best_end_barcode[1] + barcode_diff)
         start_end_match = (self.best_start_barcode[0] == self.best_end_barcode[0])
-
 
         try:
             if require_two_barcodes:  # user set --require_two_barcodes
