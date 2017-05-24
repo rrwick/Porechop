@@ -88,7 +88,7 @@ def get_arguments():
                                  'format will be chosen based on the output filename or the input '
                                  'read format')
     main_group.add_argument('-v', '--verbosity', type=int, default=1,
-                            help='Level of progress information: 0 = none, 1 = some, 2 = lots,'
+                            help='Level of progress information: 0 = none, 1 = some, 2 = lots, '
                                  '3 = full - output will go to stdout if reads are saved to '
                                  'a file and stderr if reads are printed to stdout')
     main_group.add_argument('-t', '--threads', type=int, default=default_threads,
@@ -141,7 +141,7 @@ def get_arguments():
     end_trim_group.add_argument('--extra_end_trim', type=int, default=2,
                                 help='This many additional bases will be removed next to adapters '
                                      'found at the ends of reads')
-    end_trim_group.add_argument('--end_threshold', type=float, default=70.0,
+    end_trim_group.add_argument('--end_threshold', type=float, default=75.0,
                                 help='Adapters at the ends of reads must have at least this '
                                      'percent identity to be removed (0 to 100)')
 
