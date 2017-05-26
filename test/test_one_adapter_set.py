@@ -159,7 +159,7 @@ class TestOneAdapterSet(unittest.TestCase):
         self.assertTrue(read_6_1[1].startswith('GTGGCCAATG'))
         self.assertTrue(read_6_1[1].endswith('ACTCAAGTTA'))
         self.assertTrue(read_6_2[1].startswith('AGGTTAGGTA'))
-        self.assertTrue(read_6_2[1].endswith('GAGACATTAC'))
+        self.assertTrue(read_6_2[1].endswith('GACGTGACGT'))
         if read_type == 'FASTQ':
             self.assertEqual(len(read_6_1[2]), 3900)
             self.assertEqual(len(read_6_2[2]), 7962)
