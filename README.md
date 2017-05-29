@@ -151,9 +151,11 @@ SEQUENCE_1 belongs in the NB01 bin and SEQUENCE_2 belongs in the NB02 bin, so wh
 
 Porechop can also demultiplex the reads into bins based on which barcode was found. This is done by using the `-b` option, which specifies an output directory for the trimmed reads (each barcode in a separate file), instead of `-o`.
 
-Reads are only assigned to a barcode bin if the match is strong enough (default 75%, change with `--barcode_threshold`) and sufficiently better than the second-best barcode match (default 5% better, change with `--barcode_diff`). E.g. with default settings, if barcode NB01 was found at 79% identity and NB02 was found at 76% identity, the read will not be assigned to a barcode bin because the results were too close. But if you used `--barcode_diff 1`, then that read _would_ be assigned to the NB01 bin.
+Porechop looks for barcodes at the start and end of each read. All barcode matches are found, and if the best match is strong enough (default 75%, change with `--barcode_threshold`) and sufficiently better than the second-best barcode match (default 5% better, change with `--barcode_diff`), then the read is assigned to that barcode bin. E.g. with default settings, if BC01 was found at 79% identity and BC02 was found at 76% identity, the read will not be assigned to a barcode bin because the results were too close. But if you used `--barcode_diff 1`, then that read _would_ be assigned to the BC01 bin.
 
-Porechop looks for barcodes at the start and end of each read. If the best start-read match is different from the best end-read match, then the read will not be put in a barcode bin (this could be caused by a chimeric read). By default, Porechop will bin reads where only one barcode match is found (e.g. NB01 at the read start, nothing at the read end). If you use the `--require_two_barcodes` option, Porechop will be more stringent and only assign reads to a barcode bin which have a barcode match at their start _and_ end. Also, the `--discard_middle` option is always active when demultiplexing barcoded reads (because the pieces of chimeric reads may belong in separate bins).
+By default, Porechop only requires a single barcode match to bin a read. If you use the `--require_two_barcodes` option, then it will be much more stringent and assess the start and end of the read independently. I.e. to be binned, the start of a read must have a good match for a barcode and the end of the read must also have a good match for the same barcode. This will result in far more reads failing to be assigned to a bin, but the reads which are assigned have a very high confidence. Note that for some library preps (e.g. the rapid barcoding kit), barcodes may only be at the start of reads, in which case the `--require_two_barcodes` option is not appropriate.
+
+Note that the `--discard_middle` option is always active when demultiplexing barcoded reads. This is because a read with a middle adapter is likely chimeric and the pieces of chimeric reads may belong in separate bins.
 
 Usage examples:
 * __Default settings__:<br>
@@ -164,6 +166,18 @@ Usage examples:
 `porechop -i input_reads.fastq.gz -b output_dir --barcode_threshold 60 --barcode_diff 1`
 
 
+### Barcode demultiplexing with Albacore
+
+'What about Albacore's barcode demultiplexing?' I hear you say. 'Doesn't this make Porechop's demultiplexing redundant?' Yes, Albacore v1.0 and later can demultiplex Nanopore reads during basecalling, which is a very nice feature. But Albacore and Porechop sometimes disagree on the appropriate bin for a read.
+
+Here's what I like to do:
+* Basecall the reads with Albacore and use its barcode demultiplexing. Make a single FASTQ for each barcode bin.
+* For each of Albacore's bins, trim the reads with Porechop and use Porechop's barcode binning.
+* Discard any reads which Porechop puts into a different bin than Albacore.
+
+For example, Albacore may have put many reads into the `barcode02` directory. When Porechop trims and bins these reads, it may put 95% of them in the BC02 bin, but 4% go in the 'none' bin and 1% go into bins for other barcodes. By keeping only the 95% of reads where Albacore and Porechop agree, the risk of misclassification is reduced.
+
+
 ### Output
 
 If Porechop is run with the output file specified using `-o`, it will display progress info to stdout. It will try to deduce the format of the output reads using the output filename (can handle `.fastq`, `.fastq.gz`, `.fasta` and `.fasta.gz`). The `--format` option can be used to override this automatic detection.
@@ -172,10 +186,11 @@ Alternately, you can run Porechop with `-b` which specifies a directory for barc
 
 If Porechop is run without `-o` or `-b`, then it will output the trimmed reads to stdout and print its progress info to stderr. The output format of the reads will be FASTA/FASTQ based on the input reads, or else can be specified using `--format`.
 
-Whether or not `-o` or `-b` is used, the `--verbosity` option will change the output of progress info:
+The `--verbosity` option will change the output of progress info:
 * `--verbosity 0` gives no progress output.
 * `--verbosity 1` (the default) gives summary info about end adapter trimming and shows all instances of middle adapter splitting.
 * `--verbosity 2` shows sequences and is described below.
+* `--verbosity 3` shows tons of data (mainly for debugging).
 
 
 ### Verbose output
@@ -201,28 +216,30 @@ The same colour scheme is used for middle adapters, but only reads with a positi
 The known Nanopore adapters that Porechop looks for are defined in the [adapters.py](../master/porechop/adapters.py) file.
 
 They are:
-* SQK-MAP006
-* SQK-NSK007
+* Ligation kit adapters
+* Rapid kit adapters
+* PCR kit adapters
+* Barcodes
 * Native barcoding
+* Rapid barcoding
 
-If you know of any I missed, please let me know and I'll add them!
+If you want to add your own adapter sequences to Porechop, you can do so by editing the [adapters.py](../master/porechop/adapters.py) file (instructions are in that file). And if you know of any adapter sequences that I've missed, please let me know and I'll add them!
 
 
 
 # Full usage
 
 ```
-usage: porechop-runner.py [-h] -i INPUT [-o OUTPUT] [--format {auto,fasta,fastq}] [-v VERBOSITY]
-                          [-t THREADS] [--version] [-b BARCODE_DIR]
-                          [--barcode_threshold BARCODE_THRESHOLD] [--barcode_diff BARCODE_DIFF]
-                          [--require_two_barcodes] [--adapter_threshold ADAPTER_THRESHOLD]
-                          [--check_reads CHECK_READS] [--scoring_scheme SCORING_SCHEME]
-                          [--end_size END_SIZE] [--min_trim_size MIN_TRIM_SIZE]
-                          [--extra_end_trim EXTRA_END_TRIM] [--end_threshold END_THRESHOLD]
-                          [--discard_middle] [--middle_threshold MIDDLE_THRESHOLD]
-                          [--extra_middle_trim_good_side EXTRA_MIDDLE_TRIM_GOOD_SIDE]
-                          [--extra_middle_trim_bad_side EXTRA_MIDDLE_TRIM_BAD_SIDE]
-                          [--min_split_read_size MIN_SPLIT_READ_SIZE]
+usage: porechop [-h] -i INPUT [-o OUTPUT] [--format {auto,fasta,fastq}] [-v VERBOSITY] [-t THREADS]
+                [--version] [-b BARCODE_DIR] [--barcode_threshold BARCODE_THRESHOLD]
+                [--barcode_diff BARCODE_DIFF] [--require_two_barcodes]
+                [--adapter_threshold ADAPTER_THRESHOLD] [--check_reads CHECK_READS]
+                [--scoring_scheme SCORING_SCHEME] [--end_size END_SIZE] [--min_trim_size MIN_TRIM_SIZE]
+                [--extra_end_trim EXTRA_END_TRIM] [--end_threshold END_THRESHOLD] [--discard_middle]
+                [--middle_threshold MIDDLE_THRESHOLD]
+                [--extra_middle_trim_good_side EXTRA_MIDDLE_TRIM_GOOD_SIDE]
+                [--extra_middle_trim_bad_side EXTRA_MIDDLE_TRIM_BAD_SIDE]
+                [--min_split_read_size MIN_SPLIT_READ_SIZE]
 
 Porechop: a tool for finding adapters in Oxford Nanopore reads, trimming them from the ends and
 splitting reads with internal adapters
@@ -235,12 +252,11 @@ Main options:
   -o OUTPUT, --output OUTPUT       Filename for FASTA or FASTQ of trimmed reads (if not set, trimmed
                                    reads will be printed to stdout)
   --format {auto,fasta,fastq}      Output format for the reads - if auto, the format will be chosen
-                                   based on the output filename or the input read format (default:
-                                   auto)
+                                   based on the output filename or the input read format (default: auto)
   -v VERBOSITY, --verbosity VERBOSITY
-                                   Level of progress information: 0 = none, 1 = some, 2 = full - output
-                                   will go to stdout if reads are saved to a file and stderr if reads
-                                   are printed to stdout (default: 1)
+                                   Level of progress information: 0 = none, 1 = some, 2 = lots, 3 = full
+                                   - output will go to stdout if reads are saved to a file and stderr if
+                                   reads are printed to stdout (default: 1)
   -t THREADS, --threads THREADS    Number of threads to use for adapter alignment (default: 8)
   --version                        show program's version number and exit
 
@@ -268,16 +284,16 @@ Adapter search settings:
   --adapter_threshold ADAPTER_THRESHOLD
                                    An adapter set has to have at least this percent identity to be
                                    labelled as present and trimmed off (0 to 100) (default: 90.0)
-  --check_reads CHECK_READS        This many reads will be aligned to all possible adapters to
-                                   determine which adapter sets are present (default: 10000)
-  --scoring_scheme SCORING_SCHEME  Comma-delimited string of alignment scores: match,mismatch, gap
-                                   open, gap extend (default: 3,-6,-5,-2)
+  --check_reads CHECK_READS        This many reads will be aligned to all possible adapters to determine
+                                   which adapter sets are present (default: 10000)
+  --scoring_scheme SCORING_SCHEME  Comma-delimited string of alignment scores: match,mismatch, gap open,
+                                   gap extend (default: 3,-6,-5,-2)
 
 End adapter settings:
   Control the trimming of adapters from read ends
 
   --end_size END_SIZE              The number of base pairs at each end of the read which will be
-                                   searched for adapter sequences (default: 100)
+                                   searched for adapter sequences (default: 150)
   --min_trim_size MIN_TRIM_SIZE    Adapter alignments smaller than this will be ignored (default: 4)
   --extra_end_trim EXTRA_END_TRIM  This many additional bases will be removed next to adapters found at
                                    the ends of reads (default: 2)
@@ -294,11 +310,11 @@ Middle adapter settings:
                                    Adapters in the middle of reads must have at least this percent
                                    identity to be found (0 to 100) (default: 85.0)
   --extra_middle_trim_good_side EXTRA_MIDDLE_TRIM_GOOD_SIDE
-                                   This many additional bases will be removed next to middle adapters
-                                   on their "good" side (default: 10)
+                                   This many additional bases will be removed next to middle adapters on
+                                   their "good" side (default: 10)
   --extra_middle_trim_bad_side EXTRA_MIDDLE_TRIM_BAD_SIDE
-                                   This many additional bases will be removed next to middle adapters
-                                   on their "bad" side (default: 100)
+                                   This many additional bases will be removed next to middle adapters on
+                                   their "bad" side (default: 100)
   --min_split_read_size MIN_SPLIT_READ_SIZE
                                    Post-split read pieces smaller than this many base pairs will not be
                                    outputted (default: 1000)
