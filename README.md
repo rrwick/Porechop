@@ -2,7 +2,7 @@
 
 Porechop is a tool for finding and removing adapters from [Oxford Nanopore](https://nanoporetech.com/) reads. Adapters on the ends of reads are trimmed off, and when a read has an adapter in its middle, it is treated as chimeric and chopped into separate reads. Porechop performs thorough alignments to effectively find adapters, even at low sequence identity.
 
-Porechop also supports demultiplexing of Nanopore reads that were barcoded with the [Native Barcoding Kit](https://store.nanoporetech.com/native-barcoding-kit-1d.html) or [PCR Barcoding Kit](https://store.nanoporetech.com/catalog/product/view/id/85/s/pcr-barcoding-kit-96/).
+Porechop also supports demultiplexing of Nanopore reads that were barcoded with the [Native Barcoding Kit](https://store.nanoporetech.com/native-barcoding-kit-1d.html), [PCR Barcoding Kit](https://store.nanoporetech.com/pcr-barcoding-kit-96.html) or [Rapid Barcoding Kit](https://store.nanoporetech.com/rapid-barcoding-sequencing-kit.html).
 
 I have written Porechop for, and tested it on, 1D Nanopore reads. Its performance is unknown on 2D or 1D<sup>2</sup> reads, so use with caution on those datasets!
 
