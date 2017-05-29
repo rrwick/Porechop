@@ -98,7 +98,7 @@ __More verbose output:__<br>
 `porechop -i input_reads.fastq.gz -o output_reads.fastq.gz --verbosity 2`
 
 __Got a big server?__<br>
-`porechop -i input_reads.fastq.gz -o output_reads.fastq.gz --threads 100`
+`porechop -i input_reads.fastq.gz -o output_reads.fastq.gz --threads 40`
 
 
 
@@ -115,7 +115,7 @@ The [alignment scoring scheme](http://seqan.readthedocs.io/en/master/Tutorial/Da
 
 ### Trim adapters from read ends
 
-The first and last bases in each read (default 100 bases, change with `--end_size`) are aligned to each present adapter set. When a long enough (default 4, change with `--min_trim_size`) and strong enough (default 75%, change with `--end_threshold`) match is found, the read is trimmed. A few extra bases (default 2, change with `--extra_end_trim`) past the adapter match are removed as well to ensure it's all removed.
+The first and last bases in each read (default 150 bases, change with `--end_size`) are aligned to each present adapter set. When a long enough (default 4, change with `--min_trim_size`) and strong enough (default 75%, change with `--end_threshold`) match is found, the read is trimmed. A few extra bases (default 2, change with `--extra_end_trim`) past the adapter match are removed as well to ensure it's all removed.
 
 Identity in this step is measured over the _aligned part_ of the adapter, not its full length. E.g. if the last 5 bases of an adapter exactly match the first 5 bases of a read, that counts as a 100% identity match and those bases will be trimmed off. This allows Porechop to effectively trim partially present barcodes.
 
@@ -126,11 +126,11 @@ The default `--end_threshold` is low (75%) because false positives (trimming off
 
 The entirety of each read is aligned to the present adapter sets to spot cases where an adapter is in the middle of the read, indicating a chimera. When a strong enough match is found (default 85%, change with `--middle_threshold`), the read is split. If the resulting parts are too short (default less than 1000 bp, change with `--min_split_read_size`), they are discarded.
 
-The default `--middle_threshold` (85%) is higher than the default `--end_threshold` (75%) because false positives in this step (splitting a read that is not chimeric) could be more problematic than false positives in the end trimming step. If false negatives (failing to split a chimera) are worse for you than false positives (splitting a non-chimera), you should reduce this threshold (e.g. `--middle_threshold 70`).
+The default `--middle_threshold` (85%) is higher than the default `--end_threshold` (75%) because false positives in this step (splitting a read that is not chimeric) could be more problematic than false positives in the end trimming step. If false negatives (failing to split a chimera) are worse for you than false positives (splitting a non-chimera), you should reduce this threshold (e.g. `--middle_threshold 75`).
 
 Extra bases are also removed next to the hit, and how many depends on the side of the adapter. If we find an adapter that's expected at the start of a read, it's likely that what follows is good sequence but what precedes it may not be. Therefore, a few bases are trimmed after the adapter (default 10, change with `--extra_middle_trim_good_side`) and more bases are trimmed before the adapter (default 100, change with `--extra_middle_trim_bad_side`). If the found adapter is one we'd expect at the end of the read, then the "good side" is before the adapter and the "bad side" is after the adapter.
 
-Here is a real example of the "good" and "bad" sides of an adapter. The adapter is in the middle of this snippet (SQK-NSK007_Y_Top at about 90% identity). The bases to the left are the "bad" side, and their repetitive nature is clear. The bases to the right are the "good" side and represent real biological sequence.
+Here is a real example of the "good" and "bad" sides of an adapter. The adapter is in the middle of this snippet (SQK-NSK007_Y_Top at about 90% identity). The bases to the left are the "bad" side and their repetitive nature is clear. The bases to the right are the "good" side and represent real biological sequence.
 ```
 TGTTGTTGTTGTTATTGTTGTTATTGTTGTTGTATTGTTGTTATTGTTGTTGTTGTACATTGTTATTGTTGTATTGTTGTTATTGTTGTTGTATTATCGGTGTACTTCGTTCAGTTACGTATTACTATCGCTATTGTTTGCAGTGAGAGGTGGCGGTGAGCGTTTTCAAATGGCCCTGTACAATCATGGGATAACAACATAAGGAACGGACCATGAAGTCACTTCT
 ```
@@ -142,9 +142,9 @@ If you run Porechop with `--discard_middle`, the reads with internal adapters wi
 
 This approach might make sense if you are trimming reads from a barcoded run, as chimeric reads may combine sequences from different bins. For example, consider this read:
 ```
-NB01_rev - SEQUENCE_1 - SQK-NSK007_Y_Top - NB02_rev -  SEQUENCE_2
+BC01_rev - SEQUENCE_1 - SQK-NSK007_Y_Top - BC02_rev -  SEQUENCE_2
 ```
-SEQUENCE_1 belongs in the NB01 bin and SEQUENCE_2 belongs in the NB02 bin, so while we could split the read, we would end up with contamination from another bin. Throwing the read out with `--discard_middle` might be the better option.
+SEQUENCE_1 belongs in the barcode 1 bin and SEQUENCE_2 belongs in the barcode 2 bin, so while we could split the read, we would end up with contamination from another bin. Throwing the read out with `--discard_middle` might be the better option.
 
 
 ### Barcode demultiplexing
@@ -168,21 +168,21 @@ Usage examples:
 
 ### Barcode demultiplexing with Albacore
 
-'What about Albacore's barcode demultiplexing?' I hear you say. 'Doesn't this make Porechop's demultiplexing redundant?' Yes, Albacore v1.0 and later can demultiplex Nanopore reads during basecalling, which is a very nice feature. But Albacore and Porechop sometimes disagree on the appropriate bin for a read.
+'What about Albacore's barcode demultiplexing?' I hear you say. 'Does this make Porechop's demultiplexing redundant?' Yes, Albacore v1.0 and later can demultiplex Nanopore reads during basecalling, which is a very nice feature. But Albacore and Porechop sometimes disagree on the appropriate bin for a read.
 
 Here's what I like to do:
-* Basecall the reads with Albacore and use its barcode demultiplexing. Make a single FASTQ for each barcode bin.
+* Basecall the reads with Albacore using its barcode demultiplexing. Make a single FASTQ for each barcode bin.
 * For each of Albacore's bins, trim the reads with Porechop and use Porechop's barcode binning.
 * Discard any reads which Porechop puts into a different bin than Albacore.
 
-For example, Albacore may have put many reads into the `barcode02` directory. When Porechop trims and bins these reads, it may put 95% of them in the BC02 bin, but 4% go in the 'none' bin and 1% go into bins for other barcodes. By keeping only the 95% of reads where Albacore and Porechop agree, the risk of misclassification is reduced.
+For example, Albacore may have put reads into the `barcode02` directory. When Porechop trims and bins these reads, it may put 95% of them in the BC02 bin, but 4% go in the 'none' bin and 1% go into bins for other barcodes. By keeping only the 95% of reads where Albacore and Porechop agree, the risk of misclassification is reduced.
 
 
 ### Output
 
 If Porechop is run with the output file specified using `-o`, it will display progress info to stdout. It will try to deduce the format of the output reads using the output filename (can handle `.fastq`, `.fastq.gz`, `.fasta` and `.fasta.gz`). The `--format` option can be used to override this automatic detection.
 
-Alternately, you can run Porechop with `-b` which specifies a directory for barcode bins. Porechop will then make separate read files in this directory for each barcode sequence (see [Barcode demultiplexing](#barcode-demultiplexing) for more details on the process). The files will be named using the barcode name or "none" if no barcode call was made (e.g. `NB01.fastq.gz`, `NB02.fastq.gz`, `none.fastq.gz`). The reads will be outputted in either FASTA or FASTQ format, as determined by the input read format or the `--format` option, and are always gzipped.
+Alternately, you can run Porechop with `-b` which specifies a directory for barcode bins. Porechop will then make separate read files in this directory for each barcode sequence (see [Barcode demultiplexing](#barcode-demultiplexing) for more details on the process). The files will be named using the barcode name or "none" if no barcode call was made (e.g. `BC01.fastq.gz`, `BC02.fastq.gz`, `none.fastq.gz`). The reads will be outputted in either FASTA or FASTQ format, as determined by the input read format or the `--format` option, and are always gzipped.
 
 If Porechop is run without `-o` or `-b`, then it will output the trimmed reads to stdout and print its progress info to stderr. The output format of the reads will be FASTA/FASTQ based on the input reads, or else can be specified using `--format`.
 
@@ -324,7 +324,7 @@ Middle adapter settings:
 
 # Acknowledgements
 
-Porechop was inspired by (and largely coded during) [Porecamp Australia 2017](https://porecamp-au.github.io/). Thanks to the organisers and attendees who helped me realise that a Nanopore adapter trimmer might be a useful tool!
+Porechop was inspired by (and largely coded during) [Porecamp Australia 2017](https://porecamp-au.github.io/). Thanks to the organisers and attendees who helped me realise that a Nanopore adapter trimmer might be a useful tool! I later met David Stoddart from Oxford Nanopore at London Calling 2017, and he helped me get many of the adapter sequences right.
 
 Also I'd like to thank the [SeqAn](https://www.seqan.de/) developers for their great library (Porechop uses SeqAn to perform its alignments).
 
