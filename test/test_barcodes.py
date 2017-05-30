@@ -55,10 +55,10 @@ class TestBarcodes(unittest.TestCase):
         """
         out, _ = self.run_command('porechop -i INPUT -b BARCODE_DIR')
 
-        bc01_trimmed_reads = self.load_trimmed_reads('BC01.fastq.gz')
-        bc02_trimmed_reads = self.load_trimmed_reads('BC02.fastq.gz')
-        bc03_trimmed_reads = self.load_trimmed_reads('BC03.fastq.gz')
-        none_trimmed_reads = self.load_trimmed_reads('none.fastq.gz')
+        bc01_trimmed_reads = self.load_trimmed_reads('BC01.fastq')
+        bc02_trimmed_reads = self.load_trimmed_reads('BC02.fastq')
+        bc03_trimmed_reads = self.load_trimmed_reads('BC03.fastq')
+        none_trimmed_reads = self.load_trimmed_reads('none.fastq')
 
         bc01_read_names = sorted(x[0] for x in bc01_trimmed_reads)
         bc02_read_names = sorted(x[0] for x in bc02_trimmed_reads)
@@ -92,10 +92,10 @@ class TestBarcodes(unittest.TestCase):
         """
         out, _ = self.run_command('porechop -i INPUT -b BARCODE_DIR --require_two_barcodes')
 
-        bc01_trimmed_reads = self.load_trimmed_reads('BC01.fastq.gz')
-        bc02_trimmed_reads = self.load_trimmed_reads('BC02.fastq.gz')
-        bc03_trimmed_reads = self.load_trimmed_reads('BC03.fastq.gz')
-        none_trimmed_reads = self.load_trimmed_reads('none.fastq.gz')
+        bc01_trimmed_reads = self.load_trimmed_reads('BC01.fastq')
+        bc02_trimmed_reads = self.load_trimmed_reads('BC02.fastq')
+        bc03_trimmed_reads = self.load_trimmed_reads('BC03.fastq')
+        none_trimmed_reads = self.load_trimmed_reads('none.fastq')
 
         bc01_read_names = sorted(x[0] for x in bc01_trimmed_reads)
         bc02_read_names = sorted(x[0] for x in bc02_trimmed_reads)

@@ -64,7 +64,7 @@ def main():
 
     output_reads(reads, args.format, args.output, read_type, args.verbosity,
                  args.discard_middle, args.min_split_read_size, args.print_dest,
-                 args.barcode_dir)
+                 args.barcode_dir, args.input)
 
 
 def get_arguments():
@@ -83,7 +83,8 @@ def get_arguments():
     main_group.add_argument('-o', '--output',
                             help='Filename for FASTA or FASTQ of trimmed reads (if not set, '
                                  'trimmed reads will be printed to stdout)')
-    main_group.add_argument('--format', choices=['auto', 'fasta', 'fastq'], default='auto',
+    main_group.add_argument('--format', choices=['auto', 'fasta', 'fastq', 'fasta.gz', 'fastq.gz'],
+                            default='auto',
                             help='Output format for the reads - if auto, the '
                                  'format will be chosen based on the output filename or the input '
                                  'read format')
@@ -112,10 +113,8 @@ def get_arguments():
                                     "too close to call)")
     barcode_group.add_argument('--require_two_barcodes', action='store_true',
                                help='Reads will only be put in barcode bins if they have a strong '
-                                    'hit for the barcode on both their start and end (default: '
-                                    'a read can be binned with only a single barcode alignment, '
-                                    'assuming no contradictory barcode alignments exist at the '
-                                    'other end)')
+                                    'match for the barcode on both their start and end (default: '
+                                    'a read can be binned with a match at its start or end)')
 
     adapter_search_group = parser.add_argument_group('Adapter search settings',
                                                      'Control how the program determines which '
@@ -447,16 +446,28 @@ def display_read_middle_trimming_summary(reads, discard_middle, verbosity, print
 
 
 def output_reads(reads, out_format, output, read_type, verbosity, discard_middle,
-                 min_split_size, print_dest, barcode_dir):
+                 min_split_size, print_dest, barcode_dir, input_filename):
     if out_format == 'auto':
         if output is None:
             out_format = read_type.lower()
-        elif '.fasta' in output:
+            if barcode_dir is not None and input_filename.lower().endswith('.gz'):
+                out_format += '.gz'
+        elif '.fasta.gz' in output.lower():
+            out_format = 'fasta.gz'
+        elif '.fastq.gz' in output.lower():
+            out_format = 'fastq.gz'
+        elif '.fasta' in output.lower():
             out_format = 'fasta'
-        elif '.fastq' in output:
+        elif '.fastq' in output.lower():
             out_format = 'fastq'
         else:
             out_format = read_type.lower()
+
+    if out_format.endswith('.gz'):
+        gzipped_out = True
+        out_format = out_format[:-3]
+    else:
+        gzipped_out = False
 
     # Output reads to barcode bins.
     if barcode_dir is not None:
@@ -481,19 +492,24 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
         for barcode_name in sorted(barcode_files.keys()):
             barcode_files[barcode_name].close()
             bin_filename = os.path.join(barcode_dir, barcode_name + '.' + out_format)
-            if not os.path.isfile(bin_filename):
-                continue
-            bin_filename_gz = bin_filename + '.gz'
-            if os.path.isfile(bin_filename_gz):
-                os.remove(bin_filename_gz)
-            try:
-                subprocess.check_output('gzip ' + bin_filename, stderr=subprocess.STDOUT,
-                                        shell=True)
-            except subprocess.CalledProcessError:
-                pass
+
+            if gzipped_out:
+                if not os.path.isfile(bin_filename):
+                    continue
+                bin_filename_gz = bin_filename + '.gz'
+                if os.path.isfile(bin_filename_gz):
+                    os.remove(bin_filename_gz)
+                try:
+                    subprocess.check_output('gzip ' + bin_filename, stderr=subprocess.STDOUT,
+                                            shell=True)
+                except subprocess.CalledProcessError:
+                    pass
+                bin_filename = bin_filename_gz
+
             table_row = [barcode_name, int_to_str(barcode_read_counts[barcode_name]),
-                         int_to_str(barcode_base_counts[barcode_name]), bin_filename_gz]
+                         int_to_str(barcode_base_counts[barcode_name]), bin_filename]
             table.append(table_row)
+
         if verbosity > 0:
             print('')
             print(bold_underline('Saving trimmed reads to barcode-specific files'), flush=True,
@@ -510,7 +526,6 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
 
     # Output to all reads to file.
     else:
-        gzipped_out = output.endswith('.gz')
         if gzipped_out:
             out_filename = 'TEMP_' + str(os.getpid()) + '.fastq'
         else:

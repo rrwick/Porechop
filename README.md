@@ -251,8 +251,9 @@ Main options:
   -i INPUT, --input INPUT          FASTA or FASTQ of input reads (required)
   -o OUTPUT, --output OUTPUT       Filename for FASTA or FASTQ of trimmed reads (if not set, trimmed
                                    reads will be printed to stdout)
-  --format {auto,fasta,fastq}      Output format for the reads - if auto, the format will be chosen
-                                   based on the output filename or the input read format (default: auto)
+  --format {auto,fasta,fastq,fasta.gz,fastq.gz}
+                                   Output format for the reads - if auto, the format will be chosen based
+                                   on the output filename or the input read format (default: auto)
   -v VERBOSITY, --verbosity VERBOSITY
                                    Level of progress information: 0 = none, 1 = some, 2 = lots, 3 = full
                                    - output will go to stdout if reads are saved to a file and stderr if
@@ -273,10 +274,9 @@ Barcode binning settings:
                                    second-best barcode identity is less than this value, it will not be
                                    put in a barcode bin (to exclude cases which are too close to call)
                                    (default: 5.0)
-  --require_two_barcodes           Reads will only be put in barcode bins if they have a strong hit for
-                                   the barcode on both their start and end (default: a read can be
-                                   binned with only a single barcode alignment, assuming no
-                                   contradictory barcode alignments exist at the other end)
+  --require_two_barcodes           Reads will only be put in barcode bins if they have a strong match for
+                                   the barcode on both their start and end (default: a read can be binned
+                                   with a match at its start or end)
 
 Adapter search settings:
   Control how the program determines which adapter sets are present
