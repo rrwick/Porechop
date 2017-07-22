@@ -180,6 +180,9 @@ def get_arguments():
     if args.barcode_dir is not None and args.output is not None:
         sys.exit('Error: only one of the following options may be used: --output, --barcode_dir')
 
+    if args.untrimmed and args.barcode_dir is None:
+        sys.exit('Error: --untrimmed can only be used with --barcode_dir')
+
     if args.barcode_dir is not None:
         args.discard_middle = True
 
@@ -491,7 +494,11 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
                     open(os.path.join(barcode_dir, barcode_name + '.' + out_format), 'wt')
             barcode_files[barcode_name].write(read_str)
             barcode_read_counts[barcode_name] += 1
-            barcode_base_counts[barcode_name] += read.seq_length_with_start_end_adapters_trimmed()
+            if untrimmed:
+                seq_length = len(read.seq)
+            else:
+                seq_length = read.seq_length_with_start_end_adapters_trimmed()
+            barcode_base_counts[barcode_name] += seq_length
         table = [['Barcode', 'Reads', 'Bases', 'File']]
 
         for barcode_name in sorted(barcode_files.keys()):
@@ -517,8 +524,9 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
 
         if verbosity > 0:
             print('')
-            print(bold_underline('Saving trimmed reads to barcode-specific files'), flush=True,
-                  file=print_dest)
+            trimmed_or_untrimmed = 'untrimmed' if untrimmed else 'trimmed'
+            print(bold_underline('Saving ' + trimmed_or_untrimmed + ' reads to barcode-specific ' +
+                                 'files'), flush=True, file=print_dest)
             print_table(table, print_dest, alignments='LRRL', max_col_width=60, col_separation=2)
             print('')
 

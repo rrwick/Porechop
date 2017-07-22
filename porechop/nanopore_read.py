@@ -86,11 +86,12 @@ class NanoporeRead(object):
         split_read_parts = [x for x in split_read_parts if len(x[0]) >= min_split_read_size]
         return split_read_parts
 
-    def get_fasta(self, min_split_read_size, discard_middle, untrimmed=0):
-        if untrimmed:
-            return ''.join(['>', self.name, '\n', add_line_breaks_to_sequence(self.seq, 70)])
+    def get_fasta(self, min_split_read_size, discard_middle, untrimmed=False):
         if not self.middle_trim_positions:
-            seq = self.get_seq_with_start_end_adapters_trimmed()
+            if untrimmed:
+                seq = self.seq
+            else:
+                seq = self.get_seq_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
             return ''.join(['>', self.name, '\n', add_line_breaks_to_sequence(seq, 70)])
@@ -106,15 +107,17 @@ class NanoporeRead(object):
                 fasta_str += ''.join(['>', read_name, '\n', seq])
             return fasta_str
 
-    def get_fastq(self, min_split_read_size, discard_middle, untrimmed=0):
-        if untrimmed:
-            return ''.join(['@', self.name, '\n', self.seq, '\n+\n', self.quals, '\n'])
+    def get_fastq(self, min_split_read_size, discard_middle, untrimmed=False):
         if not self.middle_trim_positions:
-            seq = self.get_seq_with_start_end_adapters_trimmed()
+            if untrimmed:
+                seq = self.seq
+                quals = self.quals
+            else:
+                seq = self.get_seq_with_start_end_adapters_trimmed()
+                quals = self.get_quals_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
-            return ''.join(['@', self.name, '\n', seq, '\n+\n',
-                            self.get_quals_with_start_end_adapters_trimmed(), '\n'])
+            return ''.join(['@', self.name, '\n', seq, '\n+\n', quals, '\n'])
         elif discard_middle:
             return ''
         else:

@@ -86,6 +86,8 @@ class TestBarcodes(unittest.TestCase):
         self.assertEqual(sum(len(x[2]) for x in none_trimmed_reads), 13496)
         self.assertTrue('none         2  13,496' in out)
 
+        self.assertTrue('Saving trimmed reads' in out)
+
     def test_barcodes_2(self):
         """
         Tests with --require_two_barcodes.
@@ -123,6 +125,8 @@ class TestBarcodes(unittest.TestCase):
         self.assertEqual(sum(len(x[2]) for x in none_trimmed_reads), 20792)
         self.assertTrue('none         4  20,792' in out)
 
+        self.assertTrue('Saving trimmed reads' in out)
+
     def test_barcodes_3(self):
         """
         Tests with --untrimmed.
@@ -159,3 +163,5 @@ class TestBarcodes(unittest.TestCase):
         self.assertEqual(sum(len(x[1]) for x in none_trimmed_reads), 13630)
         self.assertEqual(sum(len(x[2]) for x in none_trimmed_reads), 13630)
         self.assertTrue('none         2  13,630' in out)
+
+        self.assertTrue('Saving untrimmed reads' in out)
