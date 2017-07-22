@@ -295,9 +295,9 @@ class NanoporeRead(object):
         return read_seq
 
     def full_start_end_output(self, end_size, extra_trim_size, check_barcodes):
-        def get_alignment_string(a):
-            return a[0].name + ', full score=' + str(a[1]) + ', partial score=' + str(a[2]) + \
-                ', read position: ' + str(a[3]) + '-' + str(a[4])
+        def get_alignment_string(aln):
+            return aln[0].name + ', full score=' + str(aln[1]) + ', partial score=' + \
+                   str(aln[2]) + ', read position: ' + str(aln[3]) + '-' + str(aln[4])
         output = self.name + '\n'
         output += '  start: ' + self.formatted_start_seq(end_size, extra_trim_size) + '...\n'
         if self.start_adapter_alignments:
@@ -312,9 +312,16 @@ class NanoporeRead(object):
         if check_barcodes:
             start_name, start_id = self.best_start_barcode
             end_name, end_id = self.best_end_barcode
-            output += '  barcode call: ' + self.barcode_call + '\n'
-            output += '    start barcode: ' + start_name + ' (' + '%.1f' % start_id + '%)\n'
-            output += '    end barcode: ' + end_name + ' (' + '%.1f' % end_id + '%)\n'
+            output += '  Barcodes:\n'
+            all_start_barcodes_str = ', '.join([b[0] + ' (' + '%.1f' % b[1] + '%)'
+                                                for b in self.start_barcode_scores.items()])
+            all_end_barcodes_str = ', '.join([b[0] + ' (' + '%.1f' % b[1] + '%)'
+                                              for b in self.end_barcode_scores.items()])
+            output += '    start barcodes:     ' + all_start_barcodes_str + '\n'
+            output += '    end barcodes:       ' + all_end_barcodes_str + '\n'
+            output += '    best start barcode: ' + start_name + ' (' + '%.1f' % start_id + '%)\n'
+            output += '    best end barcode:   ' + end_name + ' (' + '%.1f' % end_id + '%)\n'
+            output += '    barcode call:       ' + self.barcode_call + '\n'
         output += '\n'
         return output
 
@@ -373,42 +380,63 @@ class NanoporeRead(object):
                                       key=lambda x: x[1])
         end_barcode_scores = sorted(self.end_barcode_scores.items(), reverse=True,
                                     key=lambda x: x[1])
+
         if len(start_barcode_scores) >= 1:
             self.best_start_barcode = start_barcode_scores[0]
-        if len(end_barcode_scores) >= 1:
-            self.best_end_barcode = end_barcode_scores[0]
         if len(start_barcode_scores) >= 2:
             self.second_best_start_barcode = start_barcode_scores[1]
+        if len(end_barcode_scores) >= 1:
+            self.best_end_barcode = end_barcode_scores[0]
         if len(end_barcode_scores) >= 2:
             self.second_best_end_barcode = end_barcode_scores[1]
 
-        start_over_threshold = (self.best_start_barcode[1] >= barcode_threshold)
-        end_over_threshold = (self.best_end_barcode[1] >= barcode_threshold)
-        start_good_diff = (self.best_start_barcode[1] >=
-                           self.second_best_start_barcode[1] + barcode_diff)
-        end_good_diff = (self.best_end_barcode[1] >=
-                         self.second_best_end_barcode[1] + barcode_diff)
-        start_end_match = (self.best_start_barcode[0] == self.best_end_barcode[0])
-
         try:
-            if require_two_barcodes:  # user set --require_two_barcodes
+            # If the user set --require_two_barcodes, then the criteria are much more stringent.
+            # Both the start and end barcodes need to be over the threshold, they both need to be
+            # sufficiently better than their second-best barcode hit, and they need to match.
+            if require_two_barcodes:
+                start_over_threshold = (self.best_start_barcode[1] >= barcode_threshold)
+                end_over_threshold = (self.best_end_barcode[1] >= barcode_threshold)
+                start_good_diff = (self.best_start_barcode[1] >=
+                                   self.second_best_start_barcode[1] + barcode_diff)
+                end_good_diff = (self.best_end_barcode[1] >=
+                                 self.second_best_end_barcode[1] + barcode_diff)
+                start_end_match = (self.best_start_barcode[0] == self.best_end_barcode[0])
+
                 assert (start_over_threshold and end_over_threshold and
                         start_good_diff and end_good_diff and start_end_match)
                 self.barcode_call = self.best_start_barcode[0]
 
-            else:  # user didn't set --require_two_barcodes
-                assert (start_over_threshold or end_over_threshold)
-                if start_over_threshold:
-                    assert start_good_diff
-                if end_over_threshold:
-                    assert end_good_diff
-                if start_over_threshold and end_over_threshold:
-                    assert start_end_match
-                    self.barcode_call = self.best_start_barcode[0]
-                elif start_over_threshold:  # only start is over threshold
-                    self.barcode_call = self.best_start_barcode[0]
-                elif end_over_threshold:  # only end is over threshold
-                    self.barcode_call = self.best_end_barcode[0]
+            # If the user didn't set --require_two_barcodes, then the criteria aren't so strict.
+            # The start/end barcodes are analysed all together.
+            else:
+                # Combine the start and end barcodes into a single list (i.e. we no longer care
+                # whether the hit was at the start or end of the read), only keeping the best score
+                # for each barcode.
+                all_barcode_scores = []
+                included_barcodes = set()
+                for name, score in sorted(start_barcode_scores + end_barcode_scores, reverse=True,
+                                          key=lambda x: x[1]):
+                    if name not in included_barcodes:
+                        all_barcode_scores.append((name, score))
+                        included_barcodes.add(name)
+
+                if len(all_barcode_scores) >= 1:
+                    best_overall_barcode = all_barcode_scores[0]
+                else:
+                    best_overall_barcode = ('none', 0.0)
+                if len(all_barcode_scores) >= 2:
+                    second_best_overall_barcode = all_barcode_scores[1]
+                else:
+                    second_best_overall_barcode = ('none', 0.0)
+
+                over_threshold = (best_overall_barcode[1] >= barcode_threshold)
+                good_diff = (best_overall_barcode[1] >=
+                             second_best_overall_barcode[1] + barcode_diff)
+                assert over_threshold
+                assert good_diff
+
+                self.barcode_call = best_overall_barcode[0]
 
         except AssertionError:
             self.barcode_call = 'none'

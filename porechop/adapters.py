@@ -30,7 +30,7 @@ class Adapter(object):
         return max(self.best_start_score, self.best_end_score)
 
     def is_barcode(self):
-        return self.name.startswith('Barcode ') or self.name.startswith('Rapid barcode ')
+        return self.name.startswith('Barcode ')
 
     def get_barcode_name(self):
         """
@@ -42,6 +42,28 @@ class Adapter(object):
             possible_names.append(self.end_sequence[0])
         barcode_name = sorted(possible_names, key=lambda x: len(x))[0]
         return barcode_name.replace(' ', '_')
+
+
+# INSTRUCTIONS FOR ADDING CUSTOM ADAPTERS
+# ---------------------------------------
+# If you need Porechop to remove adapters that aren't included, you can add your own my modifying
+# the ADAPTERS list below.
+#
+# Here is the format for a normal adapter:
+#     Adapter('Adapter_set_name',
+#             start_sequence=('Start_adapter_name', 'AAAACCCCGGGGTTTTAAAACCCCGGGGTTTT'),
+#             end_sequence=('End_adapter_name', 'AACCGGTTAACCGGTTAACCGGTTAACCGGTT'))
+#
+# You can exclude start_sequence and end_sequence as appropriate.
+#
+# If you have custom Barcodes, make sure that the adapter set name starts with 'Barcode '. Also,
+# remove the existing barcode sequences from this file to avoid conflicts:
+#     Adapter('Barcode 1',
+#             start_sequence=('Barcode_1_start', 'AAAAAAAACCCCCCCCGGGGGGGGTTTTTTTT'),
+#             end_sequence=('Barcode_1_end', 'AAAAAAAACCCCCCCCGGGGGGGGTTTTTTTT')),
+#     Adapter('Barcode 2',
+#             start_sequence=('Barcode_2_start', 'TTTTTTTTGGGGGGGGCCCCCCCCAAAAAAAA'),
+#             end_sequence=('Barcode_2_end', 'TTTTTTTTGGGGGGGGCCCCCCCCAAAAAAAA'))
 
 
 ADAPTERS = [Adapter('SQK-NSK007',
