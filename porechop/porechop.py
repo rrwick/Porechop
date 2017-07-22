@@ -64,7 +64,7 @@ def main():
 
     output_reads(reads, args.format, args.output, read_type, args.verbosity,
                  args.discard_middle, args.min_split_read_size, args.print_dest,
-                 args.barcode_dir, args.input)
+                 args.barcode_dir, args.input, args.untrimmed)
 
 
 def get_arguments():
@@ -446,7 +446,7 @@ def display_read_middle_trimming_summary(reads, discard_middle, verbosity, print
 
 
 def output_reads(reads, out_format, output, read_type, verbosity, discard_middle,
-                 min_split_size, print_dest, barcode_dir, input_filename):
+                 min_split_size, print_dest, barcode_dir, untrimmed, input_filename):
     if out_format == 'auto':
         if output is None:
             out_format = read_type.lower()
@@ -477,8 +477,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
         barcode_read_counts, barcode_base_counts = defaultdict(int), defaultdict(int)
         for read in reads:
             barcode_name = read.barcode_call
-            read_str = read.get_fasta(min_split_size, discard_middle) if out_format == 'fasta' \
-                else read.get_fastq(min_split_size, discard_middle)
+            read_str = read.get_fasta(min_split_size, discard_middle, untrimmed) if out_format == 'fasta' \
+                else read.get_fastq(min_split_size, discard_middle, untrimmed)
             if not read_str:
                 continue
             if barcode_name not in barcode_files:
