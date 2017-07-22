@@ -122,3 +122,40 @@ class TestBarcodes(unittest.TestCase):
         self.assertEqual(sum(len(x[1]) for x in none_trimmed_reads), 20792)
         self.assertEqual(sum(len(x[2]) for x in none_trimmed_reads), 20792)
         self.assertTrue('none         4  20,792' in out)
+
+    def test_barcodes_3(self):
+        """
+        Tests with --untrimmed.
+        """
+        out, _ = self.run_command('porechop -i INPUT -b BARCODE_DIR --untrimmed')
+
+        bc01_trimmed_reads = self.load_trimmed_reads('BC01.fastq')
+        bc02_trimmed_reads = self.load_trimmed_reads('BC02.fastq')
+        bc03_trimmed_reads = self.load_trimmed_reads('BC03.fastq')
+        none_trimmed_reads = self.load_trimmed_reads('none.fastq')
+
+        bc01_read_names = sorted(x[0] for x in bc01_trimmed_reads)
+        bc02_read_names = sorted(x[0] for x in bc02_trimmed_reads)
+        bc03_read_names = sorted(x[0] for x in bc03_trimmed_reads)
+        none_read_names = sorted(x[0] for x in none_trimmed_reads)
+
+        self.assertEqual(bc01_read_names, ['1', '4'])
+        self.assertEqual(bc02_read_names, ['2', '5'])
+        self.assertEqual(bc03_read_names, ['3'])
+        self.assertEqual(none_read_names, ['6', '8'])
+
+        self.assertEqual(sum(len(x[1]) for x in bc01_trimmed_reads), 9198)
+        self.assertEqual(sum(len(x[2]) for x in bc01_trimmed_reads), 9198)
+        self.assertTrue('BC01         2   9,198' in out)
+
+        self.assertEqual(sum(len(x[1]) for x in bc02_trimmed_reads), 9592)
+        self.assertEqual(sum(len(x[2]) for x in bc02_trimmed_reads), 9592)
+        self.assertTrue('BC02         2   9,592' in out)
+
+        self.assertEqual(sum(len(x[1]) for x in bc03_trimmed_reads), 7130)
+        self.assertEqual(sum(len(x[2]) for x in bc03_trimmed_reads), 7130)
+        self.assertTrue('BC03         1   7,130' in out)
+
+        self.assertEqual(sum(len(x[1]) for x in none_trimmed_reads), 13630)
+        self.assertEqual(sum(len(x[2]) for x in none_trimmed_reads), 13630)
+        self.assertTrue('none         2  13,630' in out)
