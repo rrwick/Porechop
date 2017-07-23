@@ -21,7 +21,6 @@ Very weak hits on start and end:	5b0c7ed8-c292-4948-a235-c3644a15855b
 Very weak hits on start and end:	de7b3819-a55c-4c6c-88ea-383de089ebab
 Perfect BC09 at start, very good BC02 at end:	1c25347a-7a36-4f3a-a5a2-5339ae585d4a
 Good BC03 hit at end (Porechop calls as BC03):	ca5efc50-1e67-4df4-95e9-afe4a5dbf35c
-Mediocre BC02 hit at end (Porechop calls as BC02) but has middle adapter:	88be68cf-c049-463f-b4f7-e60e0703ab47
 
 
 Albacore's BC03
