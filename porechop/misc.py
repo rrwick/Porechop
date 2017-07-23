@@ -57,14 +57,6 @@ def int_to_str(num, max_num=0):
     return num_str.rjust(len(max_str))
 
 
-def check_file_exists(filename):
-    """
-    Checks to make sure the single given file exists.
-    """
-    if not os.path.isfile(filename):
-        sys.exit('Error: could not find ' + filename)
-
-
 def get_compression_type(filename):
     """
     Attempts to guess the compression (if any) on a file using the first few bytes.

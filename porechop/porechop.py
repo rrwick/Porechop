@@ -21,8 +21,7 @@ import subprocess
 import multiprocessing
 from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
-from .misc import load_fasta_or_fastq, print_table, red, bold_underline, check_file_exists, \
-    MyHelpFormatter, int_to_str
+from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
 from .adapters import ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter
 from .nanopore_read import NanoporeRead
 from .version import __version__
@@ -30,12 +29,12 @@ from .version import __version__
 
 def main():
     args = get_arguments()
-    reads, read_type = load_reads(args.input, args.verbosity, args.print_dest)
+    reads, check_reads, read_type = load_reads(args.input, args.verbosity, args.print_dest,
+                                               args.check_reads)
 
-    matching_sets = find_matching_adapter_sets(reads, args.verbosity, args.end_size,
+    matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
                                                args.scoring_scheme_vals, args.print_dest,
-                                               args.adapter_threshold, args.check_reads,
-                                               args.threads)
+                                               args.adapter_threshold, args.threads)
     if args.barcode_dir:
         matching_sets = choose_barcoding_kit(matching_sets)
     matching_sets = exclude_end_adapters_for_rapid(matching_sets)
@@ -79,7 +78,8 @@ def get_arguments():
                                      formatter_class=MyHelpFormatter)
     main_group = parser.add_argument_group('Main options')
     main_group.add_argument('-i', '--input', required=True,
-                            help='FASTA or FASTQ of input reads (required)')
+                            help='FASTA/FASTQ of input reads or a directory which will be '
+                                 'recursively searched for FASTQ files (required)')
     main_group.add_argument('-o', '--output',
                             help='Filename for FASTA or FASTQ of trimmed reads (if not set, '
                                  'trimmed reads will be printed to stdout)')
@@ -197,20 +197,63 @@ def get_arguments():
     return args
 
 
-def load_reads(input_filename, verbosity, print_dest):
-    check_file_exists(input_filename)
-    reads, read_type = load_fasta_or_fastq(input_filename)
-    if read_type == 'FASTA':
-        reads = [NanoporeRead(x[2], x[1], '') for x in reads]
-    else:  # FASTQ
-        reads = [NanoporeRead(x[4], x[1], x[3]) for x in reads]
+def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count):
+
+    # If the input is a file, just load reads from that file. The check reads will just be the
+    # first reads from that file.
+    if os.path.isfile(input_file_or_directory):
+        reads, read_type = load_fasta_or_fastq(input_file_or_directory)
+        if read_type == 'FASTA':
+            reads = [NanoporeRead(x[2], x[1], '') for x in reads]
+        else:  # FASTQ
+            reads = [NanoporeRead(x[4], x[1], x[3]) for x in reads]
+        check_reads = reads[:check_read_count]
+
+    # If the input is a directory, assume it's an Albacore directory and search it recursively for
+    # fastq files. The check reads will be spread over all of the input files.
+    elif os.path.isdir(input_file_or_directory):
+        print(bold_underline('Searching for FASTQ files'), flush=True, file=print_dest)
+        fastqs = sorted([os.path.join(dir_path, f)
+                         for dir_path, _, filenames in os.walk(input_file_or_directory)
+                         for f in filenames
+                         if f.lower().endswith('.fastq') or f.lower().endswith('.fastq.gz')])
+        if not fastqs:
+            sys.exit('Error: could not find fastq files in ' + input_file_or_directory)
+        reads = []
+        read_type = 'FASTQ'
+        check_reads = []
+        check_reads_per_file = int(round(check_read_count / len(fastqs)))
+        for fastq_file in fastqs:
+            print(fastq_file, flush=True, file=print_dest)
+            file_reads, _ = load_fasta_or_fastq(fastq_file)
+            file_reads = [NanoporeRead(x[4], x[1], x[3]) for x in file_reads]
+
+            albacore_barcode = get_albacore_barcode_from_path(fastq_file)
+            for read in file_reads:
+                read.albacore_barcode_call = albacore_barcode
+            reads += file_reads
+            check_reads += file_reads[:check_reads_per_file]
+        print('', flush=True, file=print_dest)
+
+    else:
+        sys.exit('Error: could not find ' + input_file_or_directory)
+
     if verbosity > 0:
         print('', file=print_dest)
-    return reads, read_type
+    return reads, check_reads, read_type
 
 
-def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, print_dest,
-                               adapter_threshold, check_reads, threads):
+def get_albacore_barcode_from_path(albacore_path):
+    if '/unclassified/' in albacore_path:
+        return 'none'
+    if '/barcode' in albacore_path:
+        return 'BC' + albacore_path.split('/barcode')[1][:2]
+    else:
+        return None
+
+
+def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_vals, print_dest,
+                               adapter_threshold, threads):
     """
     Aligns all of the adapter sets to the start/end of reads to see which (if any) matches best.
     """
@@ -219,11 +262,9 @@ def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, 
 
     search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
 
-    read_subset = reads[:check_reads]
-
     # If single-threaded, do the work in a simple loop.
     if threads == 1:
-        for read in read_subset:
+        for read in check_reads:
             for adapter_set in search_adapters:
                 read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
 
@@ -234,7 +275,7 @@ def find_matching_adapter_sets(reads, verbosity, end_size, scoring_scheme_vals, 
             r.align_adapter_set(a, b, c)
         with ThreadPool(threads) as pool:
             arg_list = []
-            for read in read_subset:
+            for read in check_reads:
                 for adapter_set in search_adapters:
                     arg_list.append((read, adapter_set, end_size, scoring_scheme_vals))
             pool.map(align_adapter_set_one_arg, arg_list)

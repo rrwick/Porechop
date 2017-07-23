@@ -1,0 +1,49 @@
+Albacore's BC01
+---------------
+Perfect BC01 at start, nothing good at end:	d82a6ff9-99cf-4f23-9246-cedfc6e8c88b
+Perfect BC01 at end, mediocre BC01 at start:	a4a5afa1-747e-47ea-abb9-c54029c315ec
+Perfect BC01 at start, very good BC01 at end:	432342b4-d6fb-4915-96ca-1b4a570779cf
+Perfect BC01 at start, very good BC04 at end:	ffa40714-6027-4ebc-9f49-ecde4f6511f3
+Good BC01 at start, good BC09 at end:	f38d7656-735d-4be9-92ce-94a568bada56
+Very good BC03 at start, very good BC01 at end:	9dc8c47d-e574-497b-b24d-5cf8f09cb189
+Very weak hits on start and end:	ba8d33e4-7b53-42e8-8e6f-1d017698a21e
+Very weak hits on start and end:	04a00c9c-4a3a-4ba6-8161-ba01d9a77f22
+Good BC01 hit at end (Porechop calls as BC01) but has middle adapter:	16d22f33-944e-427f-9ec7-c6abeb5031bb
+Mediocre BC03 hit at end (Porechop calls as BC03):	b8db6753-a98a-40c3-8f80-aadedcf4d1e4
+
+
+Albacore's BC02
+---------------
+Very good BC02 at start, perfect BC02 at end:	15c8df94-6795-451b-8f71-bc32580068f2
+Perfect BC02 at start, nothing good at end:	4dd6464b-5cea-4f3a-8f26-740983ca2a57
+Weak BC02 at start, perfect BC02 at end:	28e41a6a-25db-4023-a27e-f3ffb59f238a
+Very weak hits on start and end:	5b0c7ed8-c292-4948-a235-c3644a15855b
+Very weak hits on start and end:	de7b3819-a55c-4c6c-88ea-383de089ebab
+Perfect BC09 at start, very good BC02 at end:	1c25347a-7a36-4f3a-a5a2-5339ae585d4a
+Good BC03 hit at end (Porechop calls as BC03):	ca5efc50-1e67-4df4-95e9-afe4a5dbf35c
+Mediocre BC02 hit at end (Porechop calls as BC02) but has middle adapter:	88be68cf-c049-463f-b4f7-e60e0703ab47
+
+
+Albacore's BC03
+---------------
+Perfect BC03 on start and end:	73d0e477-fbfe-49c2-abc9-4974dd765bc8
+Perfect BC10 at start, perfect BC03 at end:	618187f9-2f66-4bf0-a1b6-e735b7024e86
+Perfect BC03 at start, perfect BC09 at end:	6f612e35-8174-4dc9-a239-503b10915267
+Very weak hits on both ends:	fb5162ca-4645-4a0d-9336-3aa5fdf18d74
+Very weak hits on both ends:	d30719ed-c801-48db-939c-98b10137b414
+Very good BC03 at start, very weak BC07 at end:	d75205b6-be37-4a5c-bed3-d6b218e7579b
+Very weak BC10 at start, very good BC03 at end:	47277a55-611f-415e-b0d4-3d3326e0e125
+Good BC01 hit at end (Porechop calls as BC01):	283ab5e9-492e-4b28-a200-0362b4755ced
+Good BC03 hit at start (Porechop calls as BC03) but has middle adapter:	7da83605-ace3-45db-bb61-05bebf640e70
+
+
+Albacore's unclassified
+-----------------------
+Actually junky (Porechop calls as none):	7680810e-db1f-4cde-b442-642d7ac024ca
+Actually junky (Porechop calls as none):	4d1ff7d1-b2f1-4ecc-8990-09edf0aa1970
+Actually junky (Porechop calls as none):	5e656a69-bd50-45c9-8177-a2aa38d0b04f
+Very good BC01 at end (Porechop calls as BC01):	a7ffe707-2733-43b9-a9df-950566189723
+Very good BC02 at start (Porechop calls as BC02):	111fc53c-1941-4c5b-82e2-c80dc0962bd7
+Very good BC02 at end (Porechop calls as BC02):	50e78d16-e5f9-4b77-8ce4-dde6fc6eea39
+Very good BC03 at start (Porechop calls as BC03):	7557893f-a3a1-4294-96b7-89f9e9d4470c
+Porechop calls as none but has middle adapter:	8cb0f367-8852-4796-9ecd-823d5da1d865

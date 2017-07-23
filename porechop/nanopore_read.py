@@ -46,6 +46,8 @@ class NanoporeRead(object):
         self.second_best_end_barcode = ('none', 0.0)
         self.barcode_call = 'none'
 
+        self.albacore_barcode_call = None
+
     def get_seq_with_start_end_adapters_trimmed(self):
         if not self.start_trim_amount and not self.end_trim_amount:
             return self.seq
@@ -442,6 +444,12 @@ class NanoporeRead(object):
                 self.barcode_call = best_overall_barcode[0]
 
         except AssertionError:
+            self.barcode_call = 'none'
+
+        # If the read has been binned by Albacore, then Porechop and Albacore must agree on the
+        # barcode. If they don't, the read is unclassified.
+        if self.albacore_barcode_call is not None and \
+                self.barcode_call != self.albacore_barcode_call:
             self.barcode_call = 'none'
 
 
