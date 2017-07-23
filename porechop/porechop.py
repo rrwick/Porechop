@@ -218,6 +218,7 @@ def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count)
     # If the input is a directory, assume it's an Albacore directory and search it recursively for
     # fastq files. The check reads will be spread over all of the input files.
     elif os.path.isdir(input_file_or_directory):
+        print('', file=print_dest)
         print(bold_underline('Searching for FASTQ files'), flush=True, file=print_dest)
         fastqs = sorted([os.path.join(dir_path, f)
                          for dir_path, _, filenames in os.walk(input_file_or_directory)
