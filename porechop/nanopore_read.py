@@ -149,7 +149,7 @@ class NanoporeRead(object):
             adapter_set.best_end_score = max(adapter_set.best_end_score, score)
 
     def find_start_trim(self, adapters, end_size, extra_trim_size, end_threshold,
-                        scoring_scheme_vals, min_trim_size, check_barcodes):
+                        scoring_scheme_vals, min_trim_size, check_barcodes, forward_or_reverse):
         """
         Aligns one or more adapter sequences and possibly adjusts the read's start trim amount based
         on the result.
@@ -164,11 +164,12 @@ class NanoporeRead(object):
                 self.start_trim_amount = max(self.start_trim_amount, trim_amount)
                 self.start_adapter_alignments.append((adapter, full_score, partial_score,
                                                       read_start, read_end))
-            if check_barcodes and adapter.is_barcode():
+            if check_barcodes and adapter.is_barcode() and \
+                    adapter.barcode_direction() == forward_or_reverse:
                 self.start_barcode_scores[adapter.get_barcode_name()] = full_score
 
     def find_end_trim(self, adapters, end_size, extra_trim_size, end_threshold,
-                      scoring_scheme_vals, min_trim_size, check_barcodes):
+                      scoring_scheme_vals, min_trim_size, check_barcodes, forward_or_reverse):
         """
         Aligns one or more adapter sequences and possibly adjusts the read's end trim amount based
         on the result.
@@ -185,7 +186,8 @@ class NanoporeRead(object):
                 self.end_trim_amount = max(self.end_trim_amount, trim_amount)
                 self.end_adapter_alignments.append((adapter, full_score, partial_score,
                                                     read_start, read_end))
-            if check_barcodes and adapter.is_barcode():
+            if check_barcodes and adapter.is_barcode() and \
+                    adapter.barcode_direction() == forward_or_reverse:
                 self.end_barcode_scores[adapter.get_barcode_name()] = full_score
 
     def find_middle_adapters(self, adapters, middle_threshold, extra_middle_trim_good_side,

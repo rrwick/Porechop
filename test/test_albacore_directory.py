@@ -23,7 +23,7 @@ import porechop.misc
 
 class TestAlbacoreDirectory(unittest.TestCase):
     """
-    Tests barcode demultiplexing.
+    Tests barcode demultiplexing from an Albacore output directory.
     """
     def run_command(self, command, input_path):
         runner_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'porechop-runner.py')

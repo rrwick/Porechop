@@ -35,12 +35,17 @@ def main():
     matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
                                                args.scoring_scheme_vals, args.print_dest,
                                                args.adapter_threshold, args.threads)
-    if args.barcode_dir:
-        matching_sets = choose_barcoding_kit(matching_sets)
     matching_sets = exclude_end_adapters_for_rapid(matching_sets)
-
     display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
     matching_sets = add_full_barcode_adapter_sets(matching_sets)
+
+    if args.barcode_dir:
+        forward_or_reverse_barcodes = choose_barcoding_kit(matching_sets, args.verbosity,
+                                                           args.print_dest)
+    else:
+        forward_or_reverse_barcodes = None
+    if args.verbosity > 0:
+        print('\n', file=args.print_dest)
 
     if matching_sets:
         check_barcodes = (args.barcode_dir is not None)
@@ -48,7 +53,8 @@ def main():
                                    args.extra_end_trim, args.end_threshold,
                                    args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
                                    args.threads, check_barcodes, args.barcode_threshold,
-                                   args.barcode_diff, args.require_two_barcodes)
+                                   args.barcode_diff, args.require_two_barcodes,
+                                   forward_or_reverse_barcodes)
         display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
 
         find_adapters_in_read_middles(reads, matching_sets, args.verbosity, args.middle_threshold,
@@ -282,7 +288,7 @@ def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_
     return [x for x in search_adapters if x.best_start_or_end_score() >= adapter_threshold]
 
 
-def choose_barcoding_kit(adapter_sets):
+def choose_barcoding_kit(adapter_sets, verbosity, print_dest):
     """
     If the user is sorting reads by barcode bin, choose one barcode configuration (rev comp
     barcodes at the start of the read or at the end of the read) and ignore the other.
@@ -296,11 +302,15 @@ def choose_barcoding_kit(adapter_sets):
         elif 'Barcode' in adapter_set.name and '(reverse)' in adapter_set.name:
             reverse_barcodes += score
     if forward_barcodes > reverse_barcodes:
-        return [x for x in adapter_sets if not ('Barcode' in x.name and '(reverse)' in x.name)]
+        if verbosity > 0:
+            print('\nBarcodes determined to be in forward orientation', file=print_dest)
+        return 'forward'
     elif reverse_barcodes > forward_barcodes:
-        return [x for x in adapter_sets if not ('Barcode' in x.name and '(forward)' in x.name)]
+        if verbosity > 0:
+            print('\nBarcodes determined to be in reverse orientation', file=print_dest)
+        return 'reverse'
     else:
-        return adapter_sets
+        return None
 
 
 def exclude_end_adapters_for_rapid(matching_sets):
@@ -330,7 +340,6 @@ def display_adapter_set_results(matching_sets, verbosity, print_dest):
     if verbosity > 0:
         print_table(table, print_dest, alignments='LRR', row_colour=row_colours,
                     fixed_col_widths=[35, 8, 8])
-        print('\n', file=print_dest)
 
 
 def add_full_barcode_adapter_sets(matching_sets):
@@ -360,7 +369,7 @@ def add_full_barcode_adapter_sets(matching_sets):
 def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_trim_size,
                                end_threshold, scoring_scheme_vals, print_dest, min_trim_size,
                                threads, check_barcodes, barcode_threshold, barcode_diff,
-                               require_two_barcodes):
+                               require_two_barcodes, forward_or_reverse_barcodes):
     if verbosity > 0:
         print(bold_underline('Trimming adapters from read ends'),
               file=print_dest)
@@ -378,9 +387,11 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
     if threads == 1:
         for read in reads:
             read.find_start_trim(matching_sets, end_size, extra_trim_size, end_threshold,
-                                 scoring_scheme_vals, min_trim_size, check_barcodes)
+                                 scoring_scheme_vals, min_trim_size, check_barcodes,
+                                 forward_or_reverse_barcodes)
             read.find_end_trim(matching_sets, end_size, extra_trim_size, end_threshold,
-                               scoring_scheme_vals, min_trim_size, check_barcodes)
+                               scoring_scheme_vals, min_trim_size, check_barcodes,
+                               forward_or_reverse_barcodes)
             if check_barcodes:
                 read.determine_barcode(barcode_threshold, barcode_diff, require_two_barcodes)
             if verbosity == 2:
@@ -393,9 +404,9 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
     # If multi-threaded, use a thread pool.
     else:
         def start_end_trim_one_arg(all_args):
-            r, a, b, c, d, e, f, g, h, i, j, v = all_args
-            r.find_start_trim(a, b, c, d, e, f, g)
-            r.find_end_trim(a, b, c, d, e, f, g)
+            r, a, b, c, d, e, f, g, h, i, j, k, v = all_args
+            r.find_start_trim(a, b, c, d, e, f, g, k)
+            r.find_end_trim(a, b, c, d, e, f, g, k)
             if check_barcodes:
                 r.determine_barcode(h, i, j)
             if v == 2:
@@ -409,7 +420,8 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
             for read in reads:
                 arg_list.append((read, matching_sets, end_size, extra_trim_size, end_threshold,
                                  scoring_scheme_vals, min_trim_size, check_barcodes,
-                                 barcode_threshold, barcode_diff, require_two_barcodes, verbosity))
+                                 barcode_threshold, barcode_diff, require_two_barcodes,
+                                 forward_or_reverse_barcodes, verbosity))
             for out in pool.imap(start_end_trim_one_arg, arg_list):
                 if verbosity > 1:
                     print(out, file=print_dest, flush=True)

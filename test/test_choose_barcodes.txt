@@ -1,0 +1,5 @@
+In test_choose_barcodes_1.fasta, sequences 1, 2, 3, 5 and 6 have forward barcodes. Sequence 4 has reverse barcodes.
+Sequences 7 and 8 have a mixture.
+
+In test_choose_barcodes_1.fasta, sequences 1, 2, 3, 5 and 6 have reverse barcodes. Sequence 4 has forward barcodes.
+Sequences 7 and 8 have a mixture.

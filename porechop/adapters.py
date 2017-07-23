@@ -32,6 +32,12 @@ class Adapter(object):
     def is_barcode(self):
         return self.name.startswith('Barcode ')
 
+    def barcode_direction(self):
+        if '_rev' in self.start_sequence[0]:
+            return 'reverse'
+        else:
+            return 'forward'
+
     def get_barcode_name(self):
         """
         Gets the barcode name for the output files. We want a concise name, so it looks at all
