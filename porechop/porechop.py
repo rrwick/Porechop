@@ -122,7 +122,7 @@ def get_arguments():
                                     'match for the barcode on both their start and end (default: '
                                     'a read can be binned with a match at its start or end)')
     barcode_group.add_argument('--untrimmed', action='store_true',
-                               help='Bin reads but do not trim the ends (appropriate if reads'
+                               help='Bin reads but do not trim the ends (appropriate if reads '
                                     'are to be used with Nanopolish)')
 
     adapter_search_group = parser.add_argument_group('Adapter search settings',
