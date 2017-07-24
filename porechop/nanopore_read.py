@@ -329,7 +329,6 @@ class NanoporeRead(object):
             output += '    best start barcode: ' + start_name + ' (' + '%.1f' % start_id + '%)\n'
             output += '    best end barcode:   ' + end_name + ' (' + '%.1f' % end_id + '%)\n'
             output += '    barcode call:       ' + self.barcode_call + '\n'
-        output += '\n'
         return output
 
     def formatted_middle_seq(self):

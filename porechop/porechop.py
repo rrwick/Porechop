@@ -20,6 +20,7 @@ import sys
 import subprocess
 import multiprocessing
 import shutil
+import re
 from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
@@ -211,7 +212,7 @@ def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count)
     if os.path.isfile(input_file_or_directory):
         if verbosity > 0:
             print('\n' + bold_underline('Loading reads'), flush=True, file=print_dest)
-        print(input_file_or_directory, flush=True, file=print_dest)
+            print(input_file_or_directory, flush=True, file=print_dest)
         reads, read_type = load_fasta_or_fastq(input_file_or_directory)
         if read_type == 'FASTA':
             reads = [NanoporeRead(x[2], x[1], '') for x in reads]
@@ -259,10 +260,11 @@ def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count)
 def get_albacore_barcode_from_path(albacore_path):
     if '/unclassified/' in albacore_path:
         return 'none'
-    if '/barcode' in albacore_path:
-        return 'BC' + albacore_path.split('/barcode')[1][:2]
-    else:
-        return None
+    matches = re.findall('/barcode(\\d\\d)/', albacore_path)
+    if matches:
+        albacore_barcode_num = matches[-1]
+        return 'BC' + albacore_barcode_num
+    return None
 
 
 def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_vals, print_dest,
@@ -538,8 +540,6 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
 
     if verbosity == 1:
         output_progress_line(read_count, read_count, print_dest, end_newline=True)
-
-    if verbosity > 0:
         print('', flush=True, file=print_dest)
 
 
@@ -557,12 +557,15 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
     if verbosity > 0:
         trimmed_or_untrimmed = 'untrimmed' if untrimmed else 'trimmed'
         if barcode_dir is not None:
+            verb = 'Saving '
             destination = 'barcode-specific files'
         elif output is None:
+            verb = 'Outputting '
             destination = 'stdout'
         else:
+            verb = 'Saving '
             destination = 'file'
-        print(bold_underline('Outputting ' + trimmed_or_untrimmed + ' reads to ' + destination),
+        print(bold_underline(verb + trimmed_or_untrimmed + ' reads to ' + destination),
               flush=True, file=print_dest)
 
     if out_format == 'auto':
@@ -587,10 +590,12 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
         gzipped_out = True
         out_format = out_format[:-3]
         if shutil.which('pigz'):
-            print('pigz found - using it to compress instead of gzip')
+            if verbosity > 0:
+                print('pigz found - using it to compress instead of gzip')
             gzip_command = 'pigz -p ' + str(threads)
         else:
-            print('pigz not found - using gzip to compress')
+            if verbosity > 0:
+                print('pigz not found - using gzip to compress')
 
     # Output reads to barcode bins.
     if barcode_dir is not None:
