@@ -110,11 +110,14 @@ def load_fasta_or_fastq(filename):
     """
     Returns a list of tuples (header, seq) for each record in the fasta/fastq file.
     """
-    file_type = get_sequence_file_type(filename)
-    if file_type == 'FASTA':
-        return load_fasta(filename), 'FASTA'
-    else:  # FASTQ
-        return load_fastq(filename), 'FASTQ'
+    try:
+        file_type = get_sequence_file_type(filename)
+        if file_type == 'FASTA':
+            return load_fasta(filename), 'FASTA'
+        else:  # FASTQ
+            return load_fastq(filename), 'FASTQ'
+    except IndexError:
+        sys.exit('Error: ' + filename + ' could not be parsed - is it formatted correctly?')
 
 
 def load_fasta(fasta_filename):
