@@ -19,6 +19,7 @@ import os
 import sys
 import subprocess
 import multiprocessing
+import shutil
 from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
@@ -69,7 +70,7 @@ def main():
 
     output_reads(reads, args.format, args.output, read_type, args.verbosity,
                  args.discard_middle, args.min_split_read_size, args.print_dest,
-                 args.barcode_dir, args.input, args.untrimmed)
+                 args.barcode_dir, args.input, args.untrimmed, args.threads)
 
 
 def get_arguments():
@@ -208,6 +209,9 @@ def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count)
     # If the input is a file, just load reads from that file. The check reads will just be the
     # first reads from that file.
     if os.path.isfile(input_file_or_directory):
+        if verbosity > 0:
+            print('\n' + bold_underline('Loading reads'), flush=True, file=print_dest)
+        print(input_file_or_directory, flush=True, file=print_dest)
         reads, read_type = load_fasta_or_fastq(input_file_or_directory)
         if read_type == 'FASTA':
             reads = [NanoporeRead(x[2], x[1], '') for x in reads]
@@ -218,8 +222,8 @@ def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count)
     # If the input is a directory, assume it's an Albacore directory and search it recursively for
     # fastq files. The check reads will be spread over all of the input files.
     elif os.path.isdir(input_file_or_directory):
-        print('', file=print_dest)
-        print(bold_underline('Searching for FASTQ files'), flush=True, file=print_dest)
+        if verbosity > 0:
+            print('\n' + bold_underline('Searching for FASTQ files'), flush=True, file=print_dest)
         fastqs = sorted([os.path.join(dir_path, f)
                          for dir_path, _, filenames in os.walk(input_file_or_directory)
                          for f in filenames
@@ -231,7 +235,8 @@ def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count)
         check_reads = []
         check_reads_per_file = int(round(check_read_count / len(fastqs)))
         for fastq_file in fastqs:
-            print(fastq_file, flush=True, file=print_dest)
+            if verbosity > 0:
+                print(fastq_file, flush=True, file=print_dest)
             file_reads, _ = load_fasta_or_fastq(fastq_file)
             file_reads = [NanoporeRead(x[4], x[1], x[3]) for x in file_reads]
 
@@ -240,13 +245,14 @@ def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count)
                 read.albacore_barcode_call = albacore_barcode
             reads += file_reads
             check_reads += file_reads[:check_reads_per_file]
-        print('', flush=True, file=print_dest)
+        if verbosity > 0:
+            print('', flush=True, file=print_dest)
 
     else:
         sys.exit('Error: could not find ' + input_file_or_directory)
 
     if verbosity > 0:
-        print('', file=print_dest)
+        print(int_to_str(len(reads)) + ' reads loaded\n\n', flush=True, file=print_dest)
     return reads, check_reads, read_type
 
 
@@ -264,16 +270,21 @@ def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_
     """
     Aligns all of the adapter sets to the start/end of reads to see which (if any) matches best.
     """
+    read_count = len(check_reads)
     if verbosity > 0:
         print(bold_underline('Looking for known adapter sets'), flush=True, file=print_dest)
+        output_progress_line(0, read_count, print_dest)
 
     search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
+    search_adapter_count = len(search_adapters)
 
     # If single-threaded, do the work in a simple loop.
     if threads == 1:
-        for read in check_reads:
+        for read_num, read in enumerate(check_reads):
             for adapter_set in search_adapters:
                 read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
+            if verbosity > 0:
+                output_progress_line(read_num+1, read_count, print_dest)
 
     # If multi-threaded, use a thread pool.
     else:
@@ -285,7 +296,16 @@ def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_
             for read in check_reads:
                 for adapter_set in search_adapters:
                     arg_list.append((read, adapter_set, end_size, scoring_scheme_vals))
-            pool.map(align_adapter_set_one_arg, arg_list)
+            finished_count = 0
+            for _ in pool.imap(align_adapter_set_one_arg, arg_list):
+                finished_count += 1
+                if verbosity > 0 and finished_count % search_adapter_count == 0:
+                    output_progress_line(finished_count // search_adapter_count,
+                                         read_count, print_dest)
+
+    if verbosity > 0:
+        output_progress_line(read_count, read_count, print_dest, end_newline=True)
+
     return [x for x in search_adapters if x.best_start_or_end_score() >= adapter_threshold]
 
 
@@ -384,9 +404,13 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
                       red(matching_set.end_sequence[1]), file=print_dest)
         print('', file=print_dest)
 
+    read_count = len(reads)
+    if verbosity == 1:
+        output_progress_line(0, read_count, print_dest)
+
     # If single-threaded, do the work in a simple loop.
     if threads == 1:
-        for read in reads:
+        for read_num, read in enumerate(reads):
             read.find_start_trim(matching_sets, end_size, extra_trim_size, end_threshold,
                                  scoring_scheme_vals, min_trim_size, check_barcodes,
                                  forward_or_reverse_barcodes)
@@ -395,10 +419,12 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
                                forward_or_reverse_barcodes)
             if check_barcodes:
                 read.determine_barcode(barcode_threshold, barcode_diff, require_two_barcodes)
-            if verbosity == 2:
+            if verbosity == 1:
+                output_progress_line(read_num+1, read_count, print_dest)
+            elif verbosity == 2:
                 print(read.formatted_start_and_end_seq(end_size, extra_trim_size, check_barcodes),
                       file=print_dest)
-            if verbosity > 2:
+            elif verbosity > 2:
                 print(read.full_start_end_output(end_size, extra_trim_size, check_barcodes),
                       file=print_dest)
 
@@ -423,11 +449,17 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
                                  scoring_scheme_vals, min_trim_size, check_barcodes,
                                  barcode_threshold, barcode_diff, require_two_barcodes,
                                  forward_or_reverse_barcodes, verbosity))
+            finished_count = 0
             for out in pool.imap(start_end_trim_one_arg, arg_list):
-                if verbosity > 1:
+                finished_count += 1
+                if verbosity == 1:
+                    output_progress_line(finished_count, read_count, print_dest)
+                elif verbosity > 1:
                     print(out, file=print_dest, flush=True)
 
-    if verbosity > 1:
+    if verbosity == 1:
+        output_progress_line(read_count, read_count, print_dest, end_newline=True)
+    if verbosity > 0:
         print('', file=print_dest)
 
 
@@ -438,12 +470,12 @@ def display_read_end_trimming_summary(reads, verbosity, print_dest):
     start_trim_count = sum(1 if x.start_trim_amount else 0 for x in reads)
     end_trim_count = sum(1 if x.end_trim_amount else 0 for x in reads)
     end_trim_total = sum(x.end_trim_amount for x in reads)
-    print(str(start_trim_count).rjust(len(str(len(reads)))) + ' / ' + str(len(reads)) +
-          ' reads had adapters trimmed from their start (' + str(start_trim_total) +
-          ' bp removed)', file=print_dest)
-    print(str(end_trim_count).rjust(len(str(len(reads)))) + ' / ' + str(len(reads)) +
-          ' reads had adapters trimmed from their end (' + str(end_trim_total) +
-          ' bp removed)', file=print_dest)
+    print(int_to_str(start_trim_count).rjust(len(int_to_str(len(reads)))) + ' / ' +
+          int_to_str(len(reads)) + ' reads had adapters trimmed from their start (' +
+          int_to_str(start_trim_total) + ' bp removed)', file=print_dest)
+    print(int_to_str(end_trim_count).rjust(len(int_to_str(len(reads)))) + ' / ' +
+          int_to_str(len(reads)) + ' reads had adapters trimmed from their end (' +
+          int_to_str(end_trim_total) + ' bp removed)', file=print_dest)
     print('\n', file=print_dest)
 
 
@@ -469,14 +501,19 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
         if matching_set.end_sequence:
             end_sequence_names.add(matching_set.end_sequence[0])
 
+    read_count = len(reads)
+    if verbosity == 1:
+        output_progress_line(0, read_count, print_dest)
+
     # If single-threaded, do the work in a simple loop.
     if threads == 1:
-        for read in reads:
+        for read_num, read in enumerate(reads):
             read.find_middle_adapters(adapters, middle_threshold, extra_trim_good_side,
                                       extra_trim_bad_side, scoring_scheme_vals,
                                       start_sequence_names, end_sequence_names)
-
-            if read.middle_adapter_positions and verbosity > 0:
+            if verbosity == 1:
+                output_progress_line(read_num+1, read_count, print_dest)
+            if read.middle_adapter_positions and verbosity > 1:
                 print(read.middle_adapter_results(verbosity), file=print_dest, flush=True)
 
     # If multi-threaded, use a thread pool.
@@ -491,9 +528,19 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
                 arg_list.append((read, adapters, middle_threshold, extra_trim_good_side,
                                  extra_trim_bad_side, scoring_scheme_vals, start_sequence_names,
                                  end_sequence_names, verbosity))
+            finished_count = 0
             for out in pool.imap(find_middle_adapters_one_arg, arg_list):
-                if verbosity > 0 and out:
+                finished_count += 1
+                if verbosity == 1:
+                    output_progress_line(finished_count + 1, read_count, print_dest)
+                if verbosity > 1 and out:
                     print(out, file=print_dest, flush=True)
+
+    if verbosity == 1:
+        output_progress_line(read_count, read_count, print_dest, end_newline=True)
+
+    if verbosity > 0:
+        print('', flush=True, file=print_dest)
 
 
 def display_read_middle_trimming_summary(reads, discard_middle, verbosity, print_dest):
@@ -501,12 +548,23 @@ def display_read_middle_trimming_summary(reads, discard_middle, verbosity, print
         return
     middle_trim_count = sum(1 if x.middle_adapter_positions else 0 for x in reads)
     verb = 'discarded' if discard_middle else 'split'
-    print(str(middle_trim_count) + ' / ' + str(len(reads)) + ' reads were ' + verb +
-          ' based on middle adapters\n', file=print_dest)
+    print(int_to_str(middle_trim_count) + ' / ' + int_to_str(len(reads)) + ' reads were ' + verb +
+          ' based on middle adapters\n\n', file=print_dest)
 
 
 def output_reads(reads, out_format, output, read_type, verbosity, discard_middle,
-                 min_split_size, print_dest, barcode_dir, input_filename, untrimmed):
+                 min_split_size, print_dest, barcode_dir, input_filename, untrimmed, threads):
+    if verbosity > 0:
+        trimmed_or_untrimmed = 'untrimmed' if untrimmed else 'trimmed'
+        if barcode_dir is not None:
+            destination = 'barcode-specific files'
+        elif output is None:
+            destination = 'stdout'
+        else:
+            destination = 'file'
+        print(bold_underline('Outputting ' + trimmed_or_untrimmed + ' reads to ' + destination),
+              flush=True, file=print_dest)
+
     if out_format == 'auto':
         if output is None:
             out_format = read_type.lower()
@@ -523,11 +581,16 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
         else:
             out_format = read_type.lower()
 
-    if out_format.endswith('.gz'):
+    gzipped_out = False
+    gzip_command = 'gzip'
+    if out_format.endswith('.gz') and (barcode_dir is not None or output is not None):
         gzipped_out = True
         out_format = out_format[:-3]
-    else:
-        gzipped_out = False
+        if shutil.which('pigz'):
+            print('pigz found - using it to compress instead of gzip')
+            gzip_command = 'pigz -p ' + str(threads)
+        else:
+            print('pigz not found - using gzip to compress')
 
     # Output reads to barcode bins.
     if barcode_dir is not None:
@@ -566,8 +629,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
                 if os.path.isfile(bin_filename_gz):
                     os.remove(bin_filename_gz)
                 try:
-                    subprocess.check_output('gzip ' + bin_filename, stderr=subprocess.STDOUT,
-                                            shell=True)
+                    subprocess.check_output(gzip_command + ' ' + bin_filename,
+                                            stderr=subprocess.STDOUT, shell=True)
                 except subprocess.CalledProcessError:
                     pass
                 bin_filename = bin_filename_gz
@@ -578,11 +641,7 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
 
         if verbosity > 0:
             print('')
-            trimmed_or_untrimmed = 'untrimmed' if untrimmed else 'trimmed'
-            print(bold_underline('Saving ' + trimmed_or_untrimmed + ' reads to barcode-specific ' +
-                                 'files'), flush=True, file=print_dest)
             print_table(table, print_dest, alignments='LRRL', max_col_width=60, col_separation=2)
-            print('')
 
     # Output to all reads to stdout.
     elif output is None:
@@ -590,6 +649,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
             read_str = read.get_fasta(min_split_size, discard_middle) if out_format == 'fasta' \
                 else read.get_fastq(min_split_size, discard_middle)
             print(read_str, end='')
+        if verbosity > 0:
+            print('Done', flush=True, file=print_dest)
 
     # Output to all reads to file.
     else:
@@ -603,8 +664,25 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
                     else read.get_fastq(min_split_size, discard_middle)
                 out.write(read_str)
         if gzipped_out:
-            subprocess.check_output('gzip -c ' + out_filename + ' > ' + output,
+            subprocess.check_output(gzip_command + ' -c ' + out_filename + ' > ' + output,
                                     stderr=subprocess.STDOUT, shell=True)
             os.remove(out_filename)
         if verbosity > 0:
-            print('\nSaved result to ' + os.path.abspath(output) + '\n', file=print_dest)
+            print('\nSaved result to ' + os.path.abspath(output), file=print_dest)
+
+    if verbosity > 0:
+        print('', flush=True, file=print_dest)
+
+
+def output_progress_line(completed, total, print_dest, end_newline=False, step=10):
+    if step > 1 and completed % step != 0 and completed != total:
+        return
+    progress_str = int_to_str(completed) + ' / ' + int_to_str(total)
+    if total > 0:
+        percent = 100.0 * completed / total
+    else:
+        percent = 0.0
+    progress_str += ' (' + '%.1f' % percent + '%)'
+
+    end_char = '\n' if end_newline else ''
+    print('\r' + progress_str, end=end_char, flush=True, file=print_dest)
