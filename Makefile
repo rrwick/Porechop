@@ -11,7 +11,7 @@
 
 # CXX and CXXFLAGS can be overridden by the user.
 CXX         ?= g++
-CXXFLAGS    ?= -Wall -Wextra -pedantic -march=native
+CXXFLAGS    ?= -Wall -Wextra -pedantic -mtune=native
 
 # These flags are required for the build to work.
 FLAGS        = -std=c++14 -Iporechop/include -fPIC
