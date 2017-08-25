@@ -293,7 +293,7 @@ Adapter search settings:
                                     labelled as present and trimmed off (0 to 100) (default: 90.0)
   --check_reads CHECK_READS         This many reads will be aligned to all possible adapters to determine
                                     which adapter sets are present (default: 10000)
-  --scoring_scheme SCORING_SCHEME   Comma-delimited string of alignment scores: match,mismatch, gap open,
+  --scoring_scheme SCORING_SCHEME   Comma-delimited string of alignment scores: match, mismatch, gap open,
                                     gap extend (default: 3,-6,-5,-2)
 
 End adapter settings:

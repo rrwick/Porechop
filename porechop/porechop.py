@@ -139,7 +139,7 @@ def get_arguments():
                                       help='This many reads will be aligned to all possible '
                                            'adapters to determine which adapter sets are present')
     adapter_search_group.add_argument('--scoring_scheme', type=str, default='3,-6,-5,-2',
-                                      help='Comma-delimited string of alignment scores: match,'
+                                      help='Comma-delimited string of alignment scores: match, '
                                            'mismatch, gap open, gap extend')
 
     end_trim_group = parser.add_argument_group('End adapter settings',
