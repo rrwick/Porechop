@@ -59,12 +59,13 @@ def main():
                                    forward_or_reverse_barcodes)
         display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
 
-        find_adapters_in_read_middles(reads, matching_sets, args.verbosity, args.middle_threshold,
-                                      args.extra_middle_trim_good_side,
-                                      args.extra_middle_trim_bad_side, args.scoring_scheme_vals,
-                                      args.print_dest, args.threads, args.discard_middle)
-        display_read_middle_trimming_summary(reads, args.discard_middle, args.verbosity,
-                                             args.print_dest)
+        if not args.no_split:
+            find_adapters_in_read_middles(reads, matching_sets, args.verbosity,
+                                          args.middle_threshold, args.extra_middle_trim_good_side,
+                                          args.extra_middle_trim_bad_side, args.scoring_scheme_vals,
+                                          args.print_dest, args.threads, args.discard_middle)
+            display_read_middle_trimming_summary(reads, args.discard_middle, args.verbosity,
+                                                 args.print_dest)
     elif args.verbosity > 0:
         print('No adapters found - output reads are unchanged from input reads\n',
               file=args.print_dest)
@@ -158,6 +159,10 @@ def get_arguments():
     middle_trim_group = parser.add_argument_group('Middle adapter settings',
                                                   'Control the splitting of read from middle '
                                                   'adapters')
+    middle_trim_group.add_argument('--no_split', action='store_true',
+                                   help='Skip splitting reads based on middle adapters '
+                                        '(default: split reads when an adapter is found in the '
+                                        'middle)')
     middle_trim_group.add_argument('--discard_middle', action='store_true',
                                    help='Reads with middle adapters will be discarded (default: '
                                         'reads with middle adapters are split) (this option is '

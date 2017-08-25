@@ -310,6 +310,8 @@ End adapter settings:
 Middle adapter settings:
   Control the splitting of read from middle adapters
 
+  --no_split                        Skip splitting reads based on middle adapters (default: split reads
+                                    when an adapter is found in the middle)
   --discard_middle                  Reads with middle adapters will be discarded (default: reads with
                                     middle adapters are split) (this option is on by default when
                                     outputting reads into barcode bins)
