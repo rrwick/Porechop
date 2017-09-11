@@ -34,10 +34,15 @@ def main():
     reads, check_reads, read_type = load_reads(args.input, args.verbosity, args.print_dest,
                                                args.check_reads)
 
-    hairpin = Adapter('Hairpin',
-                      start_sequence=('Hairpin_1', 'CGTTCTGTTTATGTTTCTTGGACACTGATTGACACGGTTTAGTAGAAC'),
-                      end_sequence=('Hairpin_2', 'CAAGAAACATAAACAGAACG'))
-    matching_sets = [hairpin]
+    hairpin_1 = Adapter('Hairpin',
+                        start_sequence=('Hairpin_1', 'CGTTCTGTTTATGTTTCTTGGACACTGATTGACACGGTTTAGTAGAAC'),
+                        end_sequence=('Hairpin_2', 'CAAGAAACATAAACAGAACG'))
+
+    hairpin_2 = Adapter('Hairpin_rev',
+                        start_sequence=('Hairpin_3', 'GTTCTACTAAACCGTGTCAATCAGTGTCCAAGAAACATAAACAGAACG'),
+                        end_sequence=('Hairpin_4', 'CGTTCTGTTTATGTTTCTTG'))
+    matching_sets = [hairpin_1, hairpin_2]
+    forward_or_reverse_barcodes = None
 
     # matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
     #                                            args.scoring_scheme_vals, args.print_dest,
@@ -55,14 +60,14 @@ def main():
         print('\n', file=args.print_dest)
 
     if matching_sets:
-        # check_barcodes = (args.barcode_dir is not None)
-        # find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
-        #                            args.extra_end_trim, args.end_threshold,
-        #                            args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
-        #                            args.threads, check_barcodes, args.barcode_threshold,
-        #                            args.barcode_diff, args.require_two_barcodes,
-        #                            forward_or_reverse_barcodes)
-        # display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
+        check_barcodes = (args.barcode_dir is not None)
+        find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
+                                   args.extra_end_trim, args.end_threshold,
+                                   args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
+                                   args.threads, check_barcodes, args.barcode_threshold,
+                                   args.barcode_diff, args.require_two_barcodes,
+                                   forward_or_reverse_barcodes)
+        display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
 
         find_adapters_in_read_middles(reads, matching_sets, args.verbosity, args.middle_threshold,
                                       args.extra_middle_trim_good_side,
