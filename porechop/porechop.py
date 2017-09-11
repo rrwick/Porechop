@@ -24,7 +24,7 @@ import re
 from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
-from .adapters import ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter
+from .adapters import ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter, Adapter
 from .nanopore_read import NanoporeRead
 from .version import __version__
 
@@ -34,30 +34,35 @@ def main():
     reads, check_reads, read_type = load_reads(args.input, args.verbosity, args.print_dest,
                                                args.check_reads)
 
-    matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
-                                               args.scoring_scheme_vals, args.print_dest,
-                                               args.adapter_threshold, args.threads)
-    matching_sets = exclude_end_adapters_for_rapid(matching_sets)
-    display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
-    matching_sets = add_full_barcode_adapter_sets(matching_sets)
+    hairpin = Adapter('Hairpin',
+                      start_sequence=('Hairpin_1', 'CGTTCTGTTTATGTTTCTTGGACACTGATTGACACGGTTTAGTAGAAC'),
+                      end_sequence=('Hairpin_2', 'CAAGAAACATAAACAGAACG'))
+    matching_sets = [hairpin]
 
-    if args.barcode_dir:
-        forward_or_reverse_barcodes = choose_barcoding_kit(matching_sets, args.verbosity,
-                                                           args.print_dest)
-    else:
-        forward_or_reverse_barcodes = None
+    # matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
+    #                                            args.scoring_scheme_vals, args.print_dest,
+    #                                            args.adapter_threshold, args.threads)
+    # matching_sets = exclude_end_adapters_for_rapid(matching_sets)
+    # display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
+    # matching_sets = add_full_barcode_adapter_sets(matching_sets)
+
+    # if args.barcode_dir:
+    #     forward_or_reverse_barcodes = choose_barcoding_kit(matching_sets, args.verbosity,
+    #                                                        args.print_dest)
+    # else:
+    #     forward_or_reverse_barcodes = None
     if args.verbosity > 0:
         print('\n', file=args.print_dest)
 
     if matching_sets:
-        check_barcodes = (args.barcode_dir is not None)
-        find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
-                                   args.extra_end_trim, args.end_threshold,
-                                   args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
-                                   args.threads, check_barcodes, args.barcode_threshold,
-                                   args.barcode_diff, args.require_two_barcodes,
-                                   forward_or_reverse_barcodes)
-        display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
+        # check_barcodes = (args.barcode_dir is not None)
+        # find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
+        #                            args.extra_end_trim, args.end_threshold,
+        #                            args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
+        #                            args.threads, check_barcodes, args.barcode_threshold,
+        #                            args.barcode_diff, args.require_two_barcodes,
+        #                            forward_or_reverse_barcodes)
+        # display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
 
         find_adapters_in_read_middles(reads, matching_sets, args.verbosity, args.middle_threshold,
                                       args.extra_middle_trim_good_side,
