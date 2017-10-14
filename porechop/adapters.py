@@ -91,6 +91,14 @@ ADAPTERS = [Adapter('SQK-NSK007',
                     start_sequence=('PCR_1_start', 'ACTTGCCTGTCGCTCTATCTTC'),
                     end_sequence=  ('PCR_1_end', 'GAAGATAGAGCGACAGGCAAGT')),
 
+            Adapter('PCR tail 1',
+                    start_sequence=('PCR_tail_1_start', 'TTAACCTTTCTGTTGGTGCTGATATTGC'),
+                    end_sequence=  ('PCR_tail_1_end',   'GCAATATCAGCACCAACAGAAAGGTTAA')),
+
+            Adapter('PCR tail 2',
+                    start_sequence=('PCR_tail_2_start', 'TTAACCTACTTGCCTGTCGCTCTATCTTC'),
+                    end_sequence=  ('PCR_tail_2_end',   'GAAGATAGAGCGACAGGCAAGTAGGTTAA')),
+
             # Some barcoding kits (like the native barcodes) use the rev comp barcode at the start
             # of the read and the forward barcode at the end of the read.
             Adapter('Barcode 1 (reverse)',
