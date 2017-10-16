@@ -128,7 +128,7 @@ def get_arguments():
                                help='Bin reads but do not trim them (appropriate if reads are to '
                                     'be used with Nanopolish) (default: trim the reads)')
     barcode_group.add_argument('--discard_unassigned', action='store_true',
-                               help='Discard unassigned reads')
+                               help='Discard unassigned reads (instead of creating a "none" bin)')
 
     adapter_search_group = parser.add_argument_group('Adapter search settings',
                                                      'Control how the program determines which '
