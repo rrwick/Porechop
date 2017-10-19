@@ -148,20 +148,20 @@ class TestBarcodes(unittest.TestCase):
         self.assertEqual(bc03_read_names, ['3'])
         self.assertEqual(none_read_names, ['6', '8'])
 
-        self.assertEqual(sum(len(x[1]) for x in bc01_trimmed_reads), 9198)
-        self.assertEqual(sum(len(x[2]) for x in bc01_trimmed_reads), 9198)
-        self.assertTrue('BC01         2   9,198' in out)
+        self.assertEqual(sum(len(x[1]) for x in bc01_trimmed_reads), 9199)
+        self.assertEqual(sum(len(x[2]) for x in bc01_trimmed_reads), 9199)
+        self.assertTrue('BC01         2   9,199' in out)
 
-        self.assertEqual(sum(len(x[1]) for x in bc02_trimmed_reads), 9592)
-        self.assertEqual(sum(len(x[2]) for x in bc02_trimmed_reads), 9592)
-        self.assertTrue('BC02         2   9,592' in out)
+        self.assertEqual(sum(len(x[1]) for x in bc02_trimmed_reads), 9594)
+        self.assertEqual(sum(len(x[2]) for x in bc02_trimmed_reads), 9594)
+        self.assertTrue('BC02         2   9,594' in out)
 
-        self.assertEqual(sum(len(x[1]) for x in bc03_trimmed_reads), 7130)
-        self.assertEqual(sum(len(x[2]) for x in bc03_trimmed_reads), 7130)
-        self.assertTrue('BC03         1   7,130' in out)
+        self.assertEqual(sum(len(x[1]) for x in bc03_trimmed_reads), 7131)
+        self.assertEqual(sum(len(x[2]) for x in bc03_trimmed_reads), 7131)
+        self.assertTrue('BC03         1   7,131' in out)
 
-        self.assertEqual(sum(len(x[1]) for x in none_trimmed_reads), 13630)
-        self.assertEqual(sum(len(x[2]) for x in none_trimmed_reads), 13630)
-        self.assertTrue('none         2  13,630' in out)
+        self.assertEqual(sum(len(x[1]) for x in none_trimmed_reads), 13631)
+        self.assertEqual(sum(len(x[2]) for x in none_trimmed_reads), 13631)
+        self.assertTrue('none         2  13,631' in out)
 
         self.assertTrue('Saving untrimmed reads' in out)
