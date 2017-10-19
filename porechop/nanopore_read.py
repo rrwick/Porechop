@@ -324,11 +324,13 @@ class NanoporeRead(object):
                                                 for b in self.start_barcode_scores.items()])
             all_end_barcodes_str = ', '.join([b[0] + ' (' + '%.1f' % b[1] + '%)'
                                               for b in self.end_barcode_scores.items()])
-            output += '    start barcodes:     ' + all_start_barcodes_str + '\n'
-            output += '    end barcodes:       ' + all_end_barcodes_str + '\n'
-            output += '    best start barcode: ' + start_name + ' (' + '%.1f' % start_id + '%)\n'
-            output += '    best end barcode:   ' + end_name + ' (' + '%.1f' % end_id + '%)\n'
-            output += '    barcode call:       ' + self.barcode_call + '\n'
+            output += '    start barcodes:        ' + all_start_barcodes_str + '\n'
+            output += '    end barcodes:          ' + all_end_barcodes_str + '\n'
+            output += '    best start barcode:    ' + start_name + ' (' + '%.1f' % start_id + '%)\n'
+            output += '    best end barcode:      ' + end_name + ' (' + '%.1f' % end_id + '%)\n'
+            if self.albacore_barcode_call is not None:
+                output += '    albacore barcode call: ' + self.albacore_barcode_call + '\n'
+            output += '    final barcode call:    ' + self.barcode_call + '\n'
         return output
 
     def formatted_middle_seq(self):
