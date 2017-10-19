@@ -435,8 +435,8 @@ def make_full_native_barcode_adapter(barcode_num):
     start_barcode_seq = barcode.start_sequence[1]
     end_barcode_seq = barcode.end_sequence[1]
 
-    start_full_seq = 'AATGTACTTCGTTCAGTTACGTATTGCTAAAGGTTAA' + start_barcode_seq + 'CAGCACC'
-    end_full_seq = 'GGTGCTG' + end_barcode_seq + 'TTAACCTTTGCAATACGTAACTGAACGAAGT'
+    start_full_seq = 'AATGTACTTCGTTCAGTTACGTATTGCTAAGGTTAA' + start_barcode_seq + 'CAGCACCT'
+    end_full_seq = 'AGGTGCTG' + end_barcode_seq + 'TTAACCTTAGCAATACGTAACTGAACGAAGT'
 
     return Adapter('Native barcoding ' + str(barcode_num) + ' (full sequence)',
                    start_sequence=('NB' + '%02d' % barcode_num + '_start', start_full_seq),
