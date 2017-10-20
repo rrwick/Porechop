@@ -99,6 +99,22 @@ ADAPTERS = [Adapter('SQK-NSK007',
                     start_sequence=('PCR_tail_2_start', 'TTAACCTACTTGCCTGTCGCTCTATCTTC'),
                     end_sequence=  ('PCR_tail_2_end',   'GAAGATAGAGCGACAGGCAAGTAGGTTAA')),
 
+
+            # 1D^2 kit adapters are interesting. ONT provided the following sequences on their site:
+            #   start: GGCGTCTGCTTGGGTGTTTAACCTTTTTGTCAGAGAGGTTCCAAGTCAGAGAGGTTCCT
+            #   end:   GGAACCTCTCTCTGACTTGGAACCTCTCTGACAAAAAGGTTAAACACCCAAGCAGACGCCAGCAAT
+            # But when looking at actual reads, I found two parts. The first corresponds to one end
+            # of the provided sequences (through slightly different):
+            Adapter('1D^2 part 1',
+                    start_sequence=('1D2_part_1_start', 'GAGAGGTTCCAAGTCAGAGAGGTTCCT'),
+                    end_sequence=  ('1D2_part_1_end',   'AGGAACCTCTCTGACTTGGAACCTCTC')),
+            # and the second part corresponds to the other end, combined with a bit of standard 1D
+            # adapter:
+            Adapter('1D^2 part 2',
+                    start_sequence=('1D2_part_2_start', 'CTTCGTTCAGTTACGTATTGCTGGCGTCTGCTT'),
+                    end_sequence=  ('1D2_part_2_end',   'CACCCAAGCAGACGCCAGCAATACGTAACT')),
+
+
             # Some barcoding kits (like the native barcodes) use the rev comp barcode at the start
             # of the read and the forward barcode at the end of the read.
             Adapter('Barcode 1 (reverse)',
