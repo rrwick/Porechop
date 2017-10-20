@@ -49,12 +49,17 @@ class TestBarcodes(unittest.TestCase):
             trimmed_reads = [(x[4], x[1], x[3]) for x in trimmed_reads]
         return trimmed_reads
 
+    def count_output_fastq_files(self):
+        return len([x for x in os.listdir(self.output_dir)
+                    if os.path.isfile(os.path.join(self.output_dir, x)) and 'fastq' in x])
+
     def test_barcodes_1(self):
         """
         Tests with default settings.
         """
         out, _ = self.run_command('porechop -i INPUT -b BARCODE_DIR')
 
+        self.assertEqual(self.count_output_fastq_files(), 4)
         bc01_trimmed_reads = self.load_trimmed_reads('BC01.fastq')
         bc02_trimmed_reads = self.load_trimmed_reads('BC02.fastq')
         bc03_trimmed_reads = self.load_trimmed_reads('BC03.fastq')
@@ -94,6 +99,7 @@ class TestBarcodes(unittest.TestCase):
         """
         out, _ = self.run_command('porechop -i INPUT -b BARCODE_DIR --require_two_barcodes')
 
+        self.assertEqual(self.count_output_fastq_files(), 4)
         bc01_trimmed_reads = self.load_trimmed_reads('BC01.fastq')
         bc02_trimmed_reads = self.load_trimmed_reads('BC02.fastq')
         bc03_trimmed_reads = self.load_trimmed_reads('BC03.fastq')
@@ -133,6 +139,7 @@ class TestBarcodes(unittest.TestCase):
         """
         out, _ = self.run_command('porechop -i INPUT -b BARCODE_DIR --untrimmed')
 
+        self.assertEqual(self.count_output_fastq_files(), 4)
         bc01_trimmed_reads = self.load_trimmed_reads('BC01.fastq')
         bc02_trimmed_reads = self.load_trimmed_reads('BC02.fastq')
         bc03_trimmed_reads = self.load_trimmed_reads('BC03.fastq')
@@ -165,3 +172,36 @@ class TestBarcodes(unittest.TestCase):
         self.assertTrue('none         2  13,631' in out)
 
         self.assertTrue('Saving untrimmed reads' in out)
+
+    def test_barcodes_4(self):
+        """
+        Tests with --discard_unassigned.
+        """
+        out, _ = self.run_command('porechop -i INPUT -b BARCODE_DIR --discard_unassigned')
+
+        self.assertEqual(self.count_output_fastq_files(), 3)
+        bc01_trimmed_reads = self.load_trimmed_reads('BC01.fastq')
+        bc02_trimmed_reads = self.load_trimmed_reads('BC02.fastq')
+        bc03_trimmed_reads = self.load_trimmed_reads('BC03.fastq')
+
+        bc01_read_names = sorted(x[0] for x in bc01_trimmed_reads)
+        bc02_read_names = sorted(x[0] for x in bc02_trimmed_reads)
+        bc03_read_names = sorted(x[0] for x in bc03_trimmed_reads)
+
+        self.assertEqual(bc01_read_names, ['1', '4'])
+        self.assertEqual(bc02_read_names, ['2', '5'])
+        self.assertEqual(bc03_read_names, ['3'])
+
+        self.assertEqual(sum(len(x[1]) for x in bc01_trimmed_reads), 8994)
+        self.assertEqual(sum(len(x[2]) for x in bc01_trimmed_reads), 8994)
+        self.assertTrue('BC01         2  8,994' in out)
+
+        self.assertEqual(sum(len(x[1]) for x in bc02_trimmed_reads), 9394)
+        self.assertEqual(sum(len(x[2]) for x in bc02_trimmed_reads), 9394)
+        self.assertTrue('BC02         2  9,394' in out)
+
+        self.assertEqual(sum(len(x[1]) for x in bc03_trimmed_reads), 6996)
+        self.assertEqual(sum(len(x[2]) for x in bc03_trimmed_reads), 6996)
+        self.assertTrue('BC03         1  6,996' in out)
+
+        self.assertTrue('Saving trimmed reads' in out)
