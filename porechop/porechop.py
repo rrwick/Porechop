@@ -73,7 +73,8 @@ def main():
 
     output_reads(reads, args.format, args.output, read_type, args.verbosity,
                  args.discard_middle, args.min_split_read_size, args.print_dest,
-                 args.barcode_dir, args.input, args.untrimmed, args.threads)
+                 args.barcode_dir, args.input, args.untrimmed, args.threads,
+                 args.discard_unassigned)
 
 
 def get_arguments():
@@ -128,6 +129,8 @@ def get_arguments():
     barcode_group.add_argument('--untrimmed', action='store_true',
                                help='Bin reads but do not trim them (appropriate if reads are to '
                                     'be used with Nanopolish) (default: trim the reads)')
+    barcode_group.add_argument('--discard_unassigned', action='store_true',
+                               help='Discard unassigned reads (instead of creating a "none" bin)')
 
     adapter_search_group = parser.add_argument_group('Adapter search settings',
                                                      'Control how the program determines which '
@@ -578,7 +581,8 @@ def display_read_middle_trimming_summary(reads, discard_middle, verbosity, print
 
 
 def output_reads(reads, out_format, output, read_type, verbosity, discard_middle,
-                 min_split_size, print_dest, barcode_dir, input_filename, untrimmed, threads):
+                 min_split_size, print_dest, barcode_dir, input_filename,
+                 untrimmed, threads, discard_unassigned):
     if verbosity > 0:
         trimmed_or_untrimmed = 'untrimmed' if untrimmed else 'trimmed'
         if barcode_dir is not None:
@@ -630,6 +634,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
         barcode_read_counts, barcode_base_counts = defaultdict(int), defaultdict(int)
         for read in reads:
             barcode_name = read.barcode_call
+            if discard_unassigned and barcode_name == 'none':
+                continue
             if out_format == 'fasta':
                 read_str = read.get_fasta(min_split_size, discard_middle, untrimmed)
             else:
