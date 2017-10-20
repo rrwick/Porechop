@@ -38,6 +38,7 @@ def main():
                                                args.scoring_scheme_vals, args.print_dest,
                                                args.adapter_threshold, args.threads)
     matching_sets = exclude_end_adapters_for_rapid(matching_sets)
+    matching_sets = fix_up_1d2_sets(matching_sets)
     display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
     matching_sets = add_full_barcode_adapter_sets(matching_sets)
 
@@ -349,6 +350,25 @@ def exclude_end_adapters_for_rapid(matching_sets):
     if 'Rapid adapter' in [x.name for x in matching_sets]:
         for s in matching_sets:
             s.end_sequence = None
+    return matching_sets
+
+
+def fix_up_1d2_sets(matching_sets):
+    """
+    The 1D^2 adapters share a lot of common sequence with the old SQK-MAP006_short adapters, so if
+    there are strong 1D^2 hits, we can exclude the redundant SQK-MAP006_short adapters.
+    """
+    matching_set_names = [x.name for x in matching_sets]
+    if '1D^2 part 1' in matching_set_names and '1D^2 part 2' in matching_set_names and \
+            'SQK-MAP006 Short' in matching_set_names:
+        part_1_score = [x for x in matching_sets
+                        if x.name == '1D^2 part 1'][0].best_start_or_end_score()
+        part_2_score = [x for x in matching_sets
+                        if x.name == '1D^2 part 2'][0].best_start_or_end_score()
+        sqk_score = [x for x in matching_sets
+                     if x.name == 'SQK-MAP006 Short'][0].best_start_or_end_score()
+        if part_1_score >= sqk_score and part_2_score >= sqk_score:
+            matching_sets = [x for x in matching_sets if x.name != 'SQK-MAP006 Short']
     return matching_sets
 
 

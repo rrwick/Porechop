@@ -113,6 +113,8 @@ ADAPTERS = [Adapter('SQK-NSK007',
             Adapter('1D^2 part 2',
                     start_sequence=('1D2_part_2_start', 'CTTCGTTCAGTTACGTATTGCTGGCGTCTGCTT'),
                     end_sequence=  ('1D2_part_2_end',   'CACCCAAGCAGACGCCAGCAATACGTAACT')),
+            # The middle part of the provided sequences is less common, so I've left it out of the
+            # adapter sequences here.
 
 
             # Some barcoding kits (like the native barcodes) use the rev comp barcode at the start
