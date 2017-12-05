@@ -86,7 +86,7 @@ def get_arguments():
     parser = argparse.ArgumentParser(description='Porechop: a tool for finding adapters in Oxford '
                                                  'Nanopore reads, trimming them from the ends and '
                                                  'splitting reads with internal adapters',
-                                     formatter_class=MyHelpFormatter)
+                                     formatter_class=MyHelpFormatter, add_help=False)
     main_group = parser.add_argument_group('Main options')
     main_group.add_argument('-i', '--input', required=True,
                             help='FASTA/FASTQ of input reads or a directory which will be '
@@ -105,7 +105,6 @@ def get_arguments():
                                  'a file and stderr if reads are printed to stdout')
     main_group.add_argument('-t', '--threads', type=int, default=default_threads,
                             help='Number of threads to use for adapter alignment')
-    main_group.add_argument('--version', action='version', version=__version__)
 
     barcode_group = parser.add_argument_group('Barcode binning settings',
                                               'Control the binning of reads based on barcodes '
@@ -127,8 +126,7 @@ def get_arguments():
                                     'match for the barcode on both their start and end (default: '
                                     'a read can be binned with a match at its start or end)')
     barcode_group.add_argument('--untrimmed', action='store_true',
-                               help='Bin reads but do not trim them (appropriate if reads are to '
-                                    'be used with Nanopolish) (default: trim the reads)')
+                               help='Bin reads but do not trim them (default: trim the reads)')
     barcode_group.add_argument('--discard_unassigned', action='store_true',
                                help='Discard unassigned reads (instead of creating a "none" bin)')
 
@@ -169,8 +167,9 @@ def get_arguments():
                                         'middle)')
     middle_trim_group.add_argument('--discard_middle', action='store_true',
                                    help='Reads with middle adapters will be discarded (default: '
-                                        'reads with middle adapters are split) (this option is '
-                                        'on by default when outputting reads into barcode bins)')
+                                        'reads with middle adapters are split) (required for '
+                                        'reads to be used with Nanopolish, this option is on by '
+                                        'default when outputting reads into barcode bins)')
     middle_trim_group.add_argument('--middle_threshold', type=float, default=85.0,
                                    help='Adapters in the middle of reads must have at least this '
                                         'percent identity to be found (0 to 100)')
@@ -183,6 +182,12 @@ def get_arguments():
     middle_trim_group.add_argument('--min_split_read_size', type=int, default=1000,
                                    help='Post-split read pieces smaller than this many base pairs '
                                         'will not be outputted')
+
+    help_args = parser.add_argument_group('Help')
+    help_args.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS,
+                           help='Show this help message and exit')
+    help_args.add_argument('--version', action='version', version=__version__,
+                           help="Show program's version number and exit")
 
     args = parser.parse_args()
 

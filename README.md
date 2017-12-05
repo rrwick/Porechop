@@ -91,9 +91,6 @@ __Demultiplex barcoded reads:__<br>
 __Demultiplex barcoded reads, straight from Albacore output directory:__<br>
 `porechop -i albacore_dir -b output_dir`
 
-__Demultiplex barcoded reads without trimming (appropriate if Nanopolish will be used):__<br>
-`porechop -i input_reads.fastq.gz -b output_dir --untrimmed`
-
 __Also works with FASTA:__<br>
 `porechop -i input_reads.fasta -o output_reads.fasta`
 
@@ -143,11 +140,9 @@ TGTTGTTGTTGTTATTGTTGTTATTGTTGTTGTATTGTTGTTATTGTTGTTGTTGTACATTGTTATTGTTGTATTGTTGT
 
 If you run Porechop with `--discard_middle`, the reads with internal adapters will be thrown out instead of split.
 
-This approach might make sense if you are trimming reads from a barcoded run, as chimeric reads may combine sequences from different bins. For example, consider this read:
-```
-BC01_rev - SEQUENCE_1 - SQK-NSK007_Y_Top - BC02_rev -  SEQUENCE_2
-```
-SEQUENCE_1 belongs in the barcode 1 bin and SEQUENCE_2 belongs in the barcode 2 bin, so while we could split the read, we would end up with contamination from another bin. Throwing the read out with `--discard_middle` might be the better option.
+If you plan on using your reads with [Nanopolish](https://github.com/jts/nanopolish), then the `--discard_middle` option is required. This is because Nanopolish first runs [`nanopolish index`](https://github.com/jts/nanopolish#data-preprocessing) to find a one-to-one association between FASTQ reads and fast5 files. If you ran Porechop _without_ `--discard_middle`, then you could end up with multiple separate FASTQ reads which are from a single fast5, and this is incompatible with Nanopolish.
+
+This option is also recommended if you are trimming reads from a demultiplexed barcoded sequencing run. This is because chimeric reads may contain two sequences from two separate barcodes, so throwing them out is the safer option to reduce cross-barcode contamination.
 
 
 ### Barcode demultiplexing
@@ -189,10 +184,10 @@ Alternately, you can run Porechop with `-b` which specifies a directory for barc
 
 If Porechop is run without `-o` or `-b`, then it will output the trimmed reads to stdout and print its progress info to stderr. The output format of the reads will be FASTA/FASTQ based on the input reads, or else can be specified using `--format`.
 
-The `--verbosity` option will change the output of progress info:
+The `--verbosity` option will change the amount of progress info:
 * `--verbosity 0` gives no progress output.
-* `--verbosity 1` (the default) gives summary info about end adapter trimming and shows all instances of middle adapter splitting.
-* `--verbosity 2` shows sequences and is described below.
+* `--verbosity 1` (default) gives summary info about end adapter trimming and middle adapter splitting.
+* `--verbosity 2` shows the actual trimmed/split sequences for each read (described more below).
 * `--verbosity 3` shows tons of data (mainly for debugging).
 
 
@@ -233,99 +228,105 @@ If you want to add your own adapter sequences to Porechop, you can do so by edit
 # Full usage
 
 ```
-usage: porechop [-h] -i INPUT [-o OUTPUT] [--format {auto,fasta,fastq,fasta.gz,fastq.gz}] [-v VERBOSITY]
-                [-t THREADS] [--version] [-b BARCODE_DIR] [--barcode_threshold BARCODE_THRESHOLD]
+usage: porechop -i INPUT [-o OUTPUT] [--format {auto,fasta,fastq,fasta.gz,fastq.gz}] [-v VERBOSITY]
+                [-t THREADS] [-b BARCODE_DIR] [--barcode_threshold BARCODE_THRESHOLD]
                 [--barcode_diff BARCODE_DIFF] [--require_two_barcodes] [--untrimmed]
-                [--adapter_threshold ADAPTER_THRESHOLD] [--check_reads CHECK_READS]
-                [--scoring_scheme SCORING_SCHEME] [--end_size END_SIZE] [--min_trim_size MIN_TRIM_SIZE]
-                [--extra_end_trim EXTRA_END_TRIM] [--end_threshold END_THRESHOLD] [--discard_middle]
+                [--discard_unassigned] [--adapter_threshold ADAPTER_THRESHOLD]
+                [--check_reads CHECK_READS] [--scoring_scheme SCORING_SCHEME] [--end_size END_SIZE]
+                [--min_trim_size MIN_TRIM_SIZE] [--extra_end_trim EXTRA_END_TRIM]
+                [--end_threshold END_THRESHOLD] [--no_split] [--discard_middle]
                 [--middle_threshold MIDDLE_THRESHOLD]
                 [--extra_middle_trim_good_side EXTRA_MIDDLE_TRIM_GOOD_SIDE]
                 [--extra_middle_trim_bad_side EXTRA_MIDDLE_TRIM_BAD_SIDE]
-                [--min_split_read_size MIN_SPLIT_READ_SIZE]
+                [--min_split_read_size MIN_SPLIT_READ_SIZE] [-h] [--version]
 
-Porechop: a tool for finding adapters in Oxford Nanopore reads, trimming them from the ends and splitting
-reads with internal adapters
-
-optional arguments:
-  -h, --help                        show this help message and exit
+Porechop: a tool for finding adapters in Oxford Nanopore reads, trimming them from the ends and
+splitting reads with internal adapters
 
 Main options:
-  -i INPUT, --input INPUT           FASTA/FASTQ of input reads or a directory which will be recursively
-                                    searched for FASTQ files (required)
-  -o OUTPUT, --output OUTPUT        Filename for FASTA or FASTQ of trimmed reads (if not set, trimmed
-                                    reads will be printed to stdout)
+  -i INPUT, --input INPUT        FASTA/FASTQ of input reads or a directory which will be
+                                 recursively searched for FASTQ files (required)
+  -o OUTPUT, --output OUTPUT     Filename for FASTA or FASTQ of trimmed reads (if not set, trimmed
+                                 reads will be printed to stdout)
   --format {auto,fasta,fastq,fasta.gz,fastq.gz}
-                                    Output format for the reads - if auto, the format will be chosen based
-                                    on the output filename or the input read format (default: auto)
+                                 Output format for the reads - if auto, the format will be chosen
+                                 based on the output filename or the input read format (default:
+                                 auto)
   -v VERBOSITY, --verbosity VERBOSITY
-                                    Level of progress information: 0 = none, 1 = some, 2 = lots, 3 = full
-                                    - output will go to stdout if reads are saved to a file and stderr if
-                                    reads are printed to stdout (default: 1)
-  -t THREADS, --threads THREADS     Number of threads to use for adapter alignment (default: 8)
-  --version                         show program's version number and exit
+                                 Level of progress information: 0 = none, 1 = some, 2 = lots, 3 =
+                                 full - output will go to stdout if reads are saved to a file and
+                                 stderr if reads are printed to stdout (default: 1)
+  -t THREADS, --threads THREADS  Number of threads to use for adapter alignment (default: 8)
 
 Barcode binning settings:
   Control the binning of reads based on barcodes (i.e. barcode demultiplexing)
 
   -b BARCODE_DIR, --barcode_dir BARCODE_DIR
-                                    Reads will be binned based on their barcode and saved to separate
-                                    files in this directory (incompatible with --output)
+                                 Reads will be binned based on their barcode and saved to separate
+                                 files in this directory (incompatible with --output)
   --barcode_threshold BARCODE_THRESHOLD
-                                    A read must have at least this percent identity to a barcode to be
-                                    binned (default: 75.0)
-  --barcode_diff BARCODE_DIFF       If the difference between a read's best barcode identity and its
-                                    second-best barcode identity is less than this value, it will not be
-                                    put in a barcode bin (to exclude cases which are too close to call)
-                                    (default: 5.0)
-  --require_two_barcodes            Reads will only be put in barcode bins if they have a strong match for
-                                    the barcode on both their start and end (default: a read can be binned
-                                    with a match at its start or end)
-  --untrimmed                       Bin reads but do not trim the ends (appropriate if reads are to be
-                                    used with Nanopolish) (default: False)
+                                 A read must have at least this percent identity to a barcode to be
+                                 binned (default: 75.0)
+  --barcode_diff BARCODE_DIFF    If the difference between a read's best barcode identity and its
+                                 second-best barcode identity is less than this value, it will not
+                                 be put in a barcode bin (to exclude cases which are too close to
+                                 call) (default: 5.0)
+  --require_two_barcodes         Reads will only be put in barcode bins if they have a strong match
+                                 for the barcode on both their start and end (default: a read can
+                                 be binned with a match at its start or end)
+  --untrimmed                    Bin reads but do not trim them (default: trim the reads)
+  --discard_unassigned           Discard unassigned reads (instead of creating a "none" bin)
+                                 (default: False)
 
 Adapter search settings:
   Control how the program determines which adapter sets are present
 
   --adapter_threshold ADAPTER_THRESHOLD
-                                    An adapter set has to have at least this percent identity to be
-                                    labelled as present and trimmed off (0 to 100) (default: 90.0)
-  --check_reads CHECK_READS         This many reads will be aligned to all possible adapters to determine
-                                    which adapter sets are present (default: 10000)
-  --scoring_scheme SCORING_SCHEME   Comma-delimited string of alignment scores: match, mismatch, gap open,
-                                    gap extend (default: 3,-6,-5,-2)
+                                 An adapter set has to have at least this percent identity to be
+                                 labelled as present and trimmed off (0 to 100) (default: 90.0)
+  --check_reads CHECK_READS      This many reads will be aligned to all possible adapters to
+                                 determine which adapter sets are present (default: 10000)
+  --scoring_scheme SCORING_SCHEME
+                                 Comma-delimited string of alignment scores: match, mismatch, gap
+                                 open, gap extend (default: 3,-6,-5,-2)
 
 End adapter settings:
   Control the trimming of adapters from read ends
 
-  --end_size END_SIZE               The number of base pairs at each end of the read which will be
-                                    searched for adapter sequences (default: 150)
-  --min_trim_size MIN_TRIM_SIZE     Adapter alignments smaller than this will be ignored (default: 4)
-  --extra_end_trim EXTRA_END_TRIM   This many additional bases will be removed next to adapters found at
-                                    the ends of reads (default: 2)
-  --end_threshold END_THRESHOLD     Adapters at the ends of reads must have at least this percent identity
-                                    to be removed (0 to 100) (default: 75.0)
+  --end_size END_SIZE            The number of base pairs at each end of the read which will be
+                                 searched for adapter sequences (default: 150)
+  --min_trim_size MIN_TRIM_SIZE  Adapter alignments smaller than this will be ignored (default: 4)
+  --extra_end_trim EXTRA_END_TRIM
+                                 This many additional bases will be removed next to adapters found
+                                 at the ends of reads (default: 2)
+  --end_threshold END_THRESHOLD  Adapters at the ends of reads must have at least this percent
+                                 identity to be removed (0 to 100) (default: 75.0)
 
 Middle adapter settings:
   Control the splitting of read from middle adapters
 
-  --no_split                        Skip splitting reads based on middle adapters (default: split reads
-                                    when an adapter is found in the middle)
-  --discard_middle                  Reads with middle adapters will be discarded (default: reads with
-                                    middle adapters are split) (this option is on by default when
-                                    outputting reads into barcode bins)
+  --no_split                     Skip splitting reads based on middle adapters (default: split
+                                 reads when an adapter is found in the middle)
+  --discard_middle               Reads with middle adapters will be discarded (default: reads with
+                                 middle adapters are split) (required for reads to be used with
+                                 Nanopolish, this option is on by default when outputting reads
+                                 into barcode bins)
   --middle_threshold MIDDLE_THRESHOLD
-                                    Adapters in the middle of reads must have at least this percent
-                                    identity to be found (0 to 100) (default: 85.0)
+                                 Adapters in the middle of reads must have at least this percent
+                                 identity to be found (0 to 100) (default: 85.0)
   --extra_middle_trim_good_side EXTRA_MIDDLE_TRIM_GOOD_SIDE
-                                    This many additional bases will be removed next to middle adapters on
-                                    their "good" side (default: 10)
+                                 This many additional bases will be removed next to middle adapters
+                                 on their "good" side (default: 10)
   --extra_middle_trim_bad_side EXTRA_MIDDLE_TRIM_BAD_SIDE
-                                    This many additional bases will be removed next to middle adapters on
-                                    their "bad" side (default: 100)
+                                 This many additional bases will be removed next to middle adapters
+                                 on their "bad" side (default: 100)
   --min_split_read_size MIN_SPLIT_READ_SIZE
-                                    Post-split read pieces smaller than this many base pairs will not be
-                                    outputted (default: 1000)
+                                 Post-split read pieces smaller than this many base pairs will not
+                                 be outputted (default: 1000)
+
+Help:
+  -h, --help                     Show this help message and exit
+  --version                      Show program's version number and exit
 ```
 
 
