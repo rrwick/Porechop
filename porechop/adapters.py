@@ -87,17 +87,19 @@ ADAPTERS = [Adapter('SQK-NSK007',
                     start_sequence=('SQK-MAP006_Short_Y_Top_LI32',    'CGGCGTCTGCTTGGGTGTTTAACCT'),
                     end_sequence=  ('SQK-MAP006_Short_Y_Bottom_LI33', 'GGTTAAACACCCAAGCAGACGCCG')),
 
+
+            # The PCR adapters are used both in PCR DNA kits and some cDNA kits.
             Adapter('PCR adapters 1',
                     start_sequence=('PCR_1_start', 'ACTTGCCTGTCGCTCTATCTTC'),
-                    end_sequence=  ('PCR_1_end', 'GAAGATAGAGCGACAGGCAAGT')),
+                    end_sequence=  ('PCR_1_end',   'GAAGATAGAGCGACAGGCAAGT')),
 
-            Adapter('PCR tail 1',
-                    start_sequence=('PCR_tail_1_start', 'TTAACCTTTCTGTTGGTGCTGATATTGC'),
-                    end_sequence=  ('PCR_tail_1_end',   'GCAATATCAGCACCAACAGAAAGGTTAA')),
+            Adapter('PCR adapters 2',
+                    start_sequence=('PCR_2_start', 'TTTCTGTTGGTGCTGATATTGC'),
+                    end_sequence=  ('PCR_2_end',   'GCAATATCAGCACCAACAGAAA')),
 
-            Adapter('PCR tail 2',
-                    start_sequence=('PCR_tail_2_start', 'TTAACCTACTTGCCTGTCGCTCTATCTTC'),
-                    end_sequence=  ('PCR_tail_2_end',   'GAAGATAGAGCGACAGGCAAGTAGGTTAA')),
+            Adapter('PCR adapters 3',
+                    start_sequence=('PCR_3_start', 'TACTTGCCTGTCGCTCTATCTTC'),
+                    end_sequence=  ('PCR_3_end',   'GAAGATAGAGCGACAGGCAAGTA')),
 
 
             # 1D^2 kit adapters are interesting. ONT provided the following sequences on their site:
@@ -115,6 +117,20 @@ ADAPTERS = [Adapter('SQK-NSK007',
                     end_sequence=  ('1D2_part_2_end',   'CACCCAAGCAGACGCCAGCAATACGTAACT')),
             # The middle part of the provided sequences is less common, so I've left it out of the
             # adapter sequences here.
+
+
+            Adapter('Direct RNA RTA',
+                    start_sequence=('DRS_RTA_start', 'GGCTTCTTCTTGCTCTTAGGTAGTAGGTTC'),
+                    end_sequence=('DRS_RTA_end', 'GAGGCGAGCGGTCAATTTTCCTAAGAGCAAGAAGAAGCCTTTTTTTTTT')),
+
+            Adapter('Direct RNA RMX',
+                    start_sequence=('DRS_RMX_start', 'TGATGATGAGGGATAGACGATGGTTGTTTCTGTTGGTGCTGATATTGCTTTTTTTTTTTTTATGATGCAAGATACGCAC'),
+                    end_sequence=('DRS_RMX_end', 'GAGGCGAGCGGTCAATTTGCAATATCAGCACCAACAGAAACAACCATCGTCTATCCCTCATCATCAGAACCTACTA')),
+
+
+            Adapter('cDNA SSP',
+                    start_sequence=('cDNA_SSP',     'TTTCTGTTGGTGCTGATATTGCTGCCATTACGGCCGGG'),
+                    end_sequence=  ('cDNA_SSP_rev', 'CCCGGCCGTAATGGCAGCAATATCAGCACCAACAGAAA')),
 
 
             # Some barcoding kits (like the native barcodes) use the rev comp barcode at the start
