@@ -121,18 +121,6 @@ ADAPTERS = [Adapter('SQK-NSK007',
             # adapter sequences here.
 
 
-            Adapter('Direct RNA empirical',
-                    end_sequence=('DRS_after_polyA', 'TCCCATCCCATACACTCCCACAT')),
-
-            # Adapter('Direct RNA RTA',
-            #         start_sequence=('DRS_RTA_start', 'GGCTTCTTCTTGCTCTTAGGTAGTAGGTTC'),
-            #         end_sequence=('DRS_RTA_end', 'GAGGCGAGCGGTCAATTTTCCTAAGAGCAAGAAGAAGCCTTTTTTTTTT')),
-            #
-            # Adapter('Direct RNA RMX',
-            #         start_sequence=('DRS_RMX_start', 'TGATGATGAGGGATAGACGATGGTTGTTTCTGTTGGTGCTGATATTGCTTTTTTTTTTTTTATGATGCAAGATACGCAC'),
-            #         end_sequence=('DRS_RMX_end', 'GAGGCGAGCGGTCAATTTGCAATATCAGCACCAACAGAAACAACCATCGTCTATCCCTCATCATCAGAACCTACTA')),
-
-
             Adapter('cDNA SSP',
                     start_sequence=('cDNA_SSP',     'TTTCTGTTGGTGCTGATATTGCTGCCATTACGGCCGGG'),
                     end_sequence=  ('cDNA_SSP_rev', 'CCCGGCCGTAATGGCAGCAATATCAGCACCAACAGAAA')),
