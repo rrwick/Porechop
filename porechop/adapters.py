@@ -43,7 +43,9 @@ class Adapter(object):
         Gets the barcode name for the output files. We want a concise name, so it looks at all
         options and chooses the shortest.
         """
-        possible_names = [self.name, self.start_sequence[0]]
+        possible_names = [self.name]
+        if self.start_sequence:
+            possible_names.append(self.start_sequence[0])
         if self.end_sequence:
             possible_names.append(self.end_sequence[0])
         barcode_name = sorted(possible_names, key=lambda x: len(x))[0]
@@ -119,13 +121,16 @@ ADAPTERS = [Adapter('SQK-NSK007',
             # adapter sequences here.
 
 
-            Adapter('Direct RNA RTA',
-                    start_sequence=('DRS_RTA_start', 'GGCTTCTTCTTGCTCTTAGGTAGTAGGTTC'),
-                    end_sequence=('DRS_RTA_end', 'GAGGCGAGCGGTCAATTTTCCTAAGAGCAAGAAGAAGCCTTTTTTTTTT')),
+            Adapter('Direct RNA empirical',
+                    end_sequence=('DRS_after_polyA', 'TCCCATCCCATACACTCCCACAT')),
 
-            Adapter('Direct RNA RMX',
-                    start_sequence=('DRS_RMX_start', 'TGATGATGAGGGATAGACGATGGTTGTTTCTGTTGGTGCTGATATTGCTTTTTTTTTTTTTATGATGCAAGATACGCAC'),
-                    end_sequence=('DRS_RMX_end', 'GAGGCGAGCGGTCAATTTGCAATATCAGCACCAACAGAAACAACCATCGTCTATCCCTCATCATCAGAACCTACTA')),
+            # Adapter('Direct RNA RTA',
+            #         start_sequence=('DRS_RTA_start', 'GGCTTCTTCTTGCTCTTAGGTAGTAGGTTC'),
+            #         end_sequence=('DRS_RTA_end', 'GAGGCGAGCGGTCAATTTTCCTAAGAGCAAGAAGAAGCCTTTTTTTTTT')),
+            #
+            # Adapter('Direct RNA RMX',
+            #         start_sequence=('DRS_RMX_start', 'TGATGATGAGGGATAGACGATGGTTGTTTCTGTTGGTGCTGATATTGCTTTTTTTTTTTTTATGATGCAAGATACGCAC'),
+            #         end_sequence=('DRS_RMX_end', 'GAGGCGAGCGGTCAATTTGCAATATCAGCACCAACAGAAACAACCATCGTCTATCCCTCATCATCAGAACCTACTA')),
 
 
             Adapter('cDNA SSP',

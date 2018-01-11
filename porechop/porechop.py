@@ -429,11 +429,14 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
     if verbosity > 0:
         print(bold_underline('Trimming adapters from read ends'),
               file=print_dest)
-        name_len = max(max(len(x.start_sequence[0]) for x in matching_sets),
-                       max(len(x.end_sequence[0]) if x.end_sequence else 0 for x in matching_sets))
+        name_len = max(max(len(x.start_sequence[0])
+                           if x.start_sequence else 0 for x in matching_sets),
+                       max(len(x.end_sequence[0])
+                           if x.end_sequence else 0 for x in matching_sets))
         for matching_set in matching_sets:
-            print('  ' + matching_set.start_sequence[0].rjust(name_len) + ': ' +
-                  red(matching_set.start_sequence[1]), file=print_dest)
+            if matching_set.start_sequence:
+                print('  ' + matching_set.start_sequence[0].rjust(name_len) + ': ' +
+                      red(matching_set.start_sequence[1]), file=print_dest)
             if matching_set.end_sequence:
                 print('  ' + matching_set.end_sequence[0].rjust(name_len) + ': ' +
                       red(matching_set.end_sequence[1]), file=print_dest)
@@ -524,15 +527,18 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
 
     adapters = []
     for matching_set in matching_sets:
-        adapters.append(matching_set.start_sequence)
-        if matching_set.end_sequence and \
-                matching_set.end_sequence[1] != matching_set.start_sequence[1]:
-            adapters.append(matching_set.end_sequence)
+        if matching_set.start_sequence:
+            adapters.append(matching_set.start_sequence)
+        if matching_set.end_sequence:
+            if (not matching_set.start_sequence) or \
+                    matching_set.end_sequence[1] != matching_set.start_sequence[1]:
+                adapters.append(matching_set.end_sequence)
 
     start_sequence_names = set()
     end_sequence_names = set()
     for matching_set in matching_sets:
-        start_sequence_names.add(matching_set.start_sequence[0])
+        if matching_set.start_sequence:
+            start_sequence_names.add(matching_set.start_sequence[0])
         if matching_set.end_sequence:
             end_sequence_names.add(matching_set.end_sequence[0])
 
