@@ -24,7 +24,8 @@ import re
 from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
-from .adapters import ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter
+from .adapters import ADAPTERS, make_full_native_barcode_adapter,\
+    make_old_full_rapid_barcode_adapter, make_new_full_rapid_barcode_adapter
 from .nanopore_read import NanoporeRead
 from .version import __version__
 
@@ -37,16 +38,18 @@ def main():
     matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
                                                args.scoring_scheme_vals, args.print_dest,
                                                args.adapter_threshold, args.threads)
-    matching_sets = exclude_end_adapters_for_rapid(matching_sets)
     matching_sets = fix_up_1d2_sets(matching_sets)
-    display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
-    matching_sets = add_full_barcode_adapter_sets(matching_sets)
 
     if args.barcode_dir:
         forward_or_reverse_barcodes = choose_barcoding_kit(matching_sets, args.verbosity,
                                                            args.print_dest)
+        matching_sets = exclude_wrong_barcodes(matching_sets, forward_or_reverse_barcodes)
     else:
         forward_or_reverse_barcodes = None
+
+    display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
+    matching_sets = add_full_barcode_adapter_sets(matching_sets)
+
     if args.verbosity > 0:
         print('\n', file=args.print_dest)
 
@@ -350,17 +353,6 @@ def choose_barcoding_kit(adapter_sets, verbosity, print_dest):
         return None
 
 
-def exclude_end_adapters_for_rapid(matching_sets):
-    """
-    Rapid reads shouldn't have end adapters, so we don't want to look for them if this seems to be
-    a rapid read set.
-    """
-    if 'Rapid adapter' in [x.name for x in matching_sets]:
-        for s in matching_sets:
-            s.end_sequence = None
-    return matching_sets
-
-
 def fix_up_1d2_sets(matching_sets):
     """
     The 1D^2 adapters share a lot of common sequence with the old SQK-MAP006_short adapters, so if
@@ -377,6 +369,20 @@ def fix_up_1d2_sets(matching_sets):
                      if x.name == 'SQK-MAP006 Short'][0].best_start_or_end_score()
         if part_1_score >= sqk_score and part_2_score >= sqk_score:
             matching_sets = [x for x in matching_sets if x.name != 'SQK-MAP006 Short']
+    return matching_sets
+
+
+def exclude_wrong_barcodes(matching_sets, forward_or_reverse_barcodes):
+    """
+    Rapid reads shouldn't have end adapters, so we don't want to look for them if this seems to be
+    a rapid read set.
+    """
+    if forward_or_reverse_barcodes == 'forward':
+        matching_sets = [x for x in matching_sets
+                         if not ('Barcode' in x.name and '(reverse)' in x.name)]
+    elif forward_or_reverse_barcodes == 'reverse':
+        matching_sets = [x for x in matching_sets
+                         if not ('Barcode' in x.name and '(forward)' in x.name)]
     return matching_sets
 
 
@@ -416,8 +422,11 @@ def add_full_barcode_adapter_sets(matching_sets):
 
         # Rapid barcode full sequences
         if all(x in matching_set_names
-               for x in ['SQK-NSK007', 'Rapid', 'Barcode ' + str(i) + ' (forward)']):
-            matching_sets.append(make_full_rapid_barcode_adapter(i))
+               for x in ['Rapid', 'Barcode ' + str(i) + ' (forward)']):
+            if 'RBK004_upstream' in matching_set_names:
+                matching_sets.append(make_new_full_rapid_barcode_adapter(i))
+            elif 'SQK-NSK007' in matching_set_names:
+                matching_sets.append(make_old_full_rapid_barcode_adapter(i))
 
     return matching_sets
 
