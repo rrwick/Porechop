@@ -100,7 +100,7 @@ struct Tuple
     // TODO(holtgrew): Return Value<>::Type?
 
     template <typename TPos>
-    inline
+    SEQAN_HOST_DEVICE inline
     typename StoredTupleValue_<TValue>::Type &
     operator[](TPos k)
     {
@@ -110,7 +110,7 @@ struct Tuple
     }
 
     template <typename TPos>
-    inline
+    SEQAN_HOST_DEVICE inline
     typename StoredTupleValue_<TValue>::Type const &
     operator[](TPos k) const
     {
@@ -130,7 +130,9 @@ struct Tuple
 };
 
 
-#pragma pack(push,1)
+#ifdef PLATFORM_WINDOWS
+    #pragma pack(push,1)
+#endif
 template <typename TValue, unsigned SIZE>
 struct Tuple<TValue, SIZE, Pack>
 {
@@ -172,8 +174,14 @@ struct Tuple<TValue, SIZE, Pack>
     {
         return i[k] = source;
     }
-};
-#pragma pack(pop)
+}
+#ifndef PLATFORM_WINDOWS
+    __attribute__((packed))
+#endif
+    ;
+#ifdef PLATFORM_WINDOWS
+      #pragma pack(pop)
+#endif
 
 //template <typename TValue, unsigned SIZE>
 //const unsigned Tuple<TValue, SIZE, Pack>::SIZE = SIZE;
@@ -600,19 +608,6 @@ operator+(Tuple<TValue, SIZE, TSpecL> const & left,
           Tuple<TValue, SIZE, TSpecR> const & right)
 {
     Tuple<TValue, SIZE, TSpecL>  tuple;
-
-    for (unsigned j = 0; j < SIZE; ++j)
-        tuple[j] = left[j] + right[j];
-
-    return tuple;
-}
-
-template <typename TValue1, unsigned SIZE, typename TSpecL, typename TValue2, typename TSpecR>
-inline Tuple<TValue1, SIZE, TSpecL>
-operator+(Tuple<TValue1, SIZE, TSpecL> const & left,
-          Tuple<TValue2, SIZE, TSpecR> const & right)
-{
-    Tuple<TValue1, SIZE, TSpecL>  tuple;
 
     for (unsigned j = 0; j < SIZE; ++j)
         tuple[j] = left[j] + right[j];

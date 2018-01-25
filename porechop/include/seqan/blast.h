@@ -39,7 +39,7 @@
 
 #include <seqan/platform.h>
 
-#ifndef COMPILER_MSVC
+#ifndef PLATFORM_WINDOWS_VS
 
 #include <cinttypes>
 #include <cmath>

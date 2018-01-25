@@ -2,6 +2,7 @@
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
 // Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2013 NVIDIA Corporation
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -29,45 +30,40 @@
 // DAMAGE.
 //
 // ==========================================================================
-// Authors: Lily Shellhammer <lily.shellhammer@gmail.com>
-//          Joerg Winkler <j.winkler@fu-berlin.de>
-// ==========================================================================
-// Facade header for module rna_io.
-// ==========================================================================
 
-#ifndef INCLUDE_SEQAN_RNA_IO_H_
-#define INCLUDE_SEQAN_RNA_IO_H_
+#ifndef PLATFORM_INTEL
+#define PLATFORM_INTEL
 
-// ===========================================================================
-// Prerequisites.
-// ===========================================================================
+// icc is gcc compatible
+#ifndef PLATFORM_GCC
+#define PLATFORM_GCC
+#endif
 
-#include <seqan/basic.h>
-#include <seqan/file.h>
-#include <seqan/sequence.h>
-#include <seqan/journaled_set.h>
-#include <seqan/graph_types.h>
-// forEach loop
-#include <seqan/parallel/parallel_algorithms.h>
+// should be set before including anything
+#ifndef _FILE_OFFSET_BITS
+  #define _FILE_OFFSET_BITS 64
+#endif
 
-// ===========================================================================
-// RNA structure containers and file formats
-// ===========================================================================
+#ifndef _LARGEFILE_SOURCE
+  #define _LARGEFILE_SOURCE
+#endif
 
-// containers
-#include <seqan/rna_io/rna_record.h>
-#include <seqan/rna_io/rna_header.h>
-#include <seqan/rna_io/rna_io_context.h>
+// The symbols SEQAN_IS_64_BIT and SEQAN_IS_32_BIT can be used to check
+// whether we are on a 32 bit or on a 64 bit machine.
+#if defined(__amd64__) || defined(__x86_64__) || defined(__ia64__)
+#define SEQAN_IS_64_BIT 1
+#define SEQAN_IS_32_BIT 0
+#else  // #if defined(__amd64__) || defined(__x86_64__) || defined(__ia64__)
+#define SEQAN_IS_64_BIT 0
+#define SEQAN_IS_32_BIT 1
+#endif  // #if defined(__amd64__) || defined(__x86_64__) || defined(__ia64__)
 
-// file format specific
-#include <seqan/rna_io/connect_read_write.h>
-#include <seqan/rna_io/dot_bracket_read_write.h>
-#include <seqan/rna_io/bpseq_read_write.h>
-#include <seqan/rna_io/stockholm_read_write.h>
-#include <seqan/rna_io/ebpseq_read_write.h>
-#include <seqan/rna_io/vienna_read_write.h>
 
-// general file I/O
-#include <seqan/rna_io/rna_struct_file.h>
+#define finline __inline__
 
-#endif  // INCLUDE_SEQAN_RNA_IO_H_
+typedef uint64_t __uint64;
+typedef uint32_t __uint32;
+typedef uint16_t __uint16;
+typedef uint8_t __uint8;
+
+#endif  // #ifndef PLATFORM_INTEL

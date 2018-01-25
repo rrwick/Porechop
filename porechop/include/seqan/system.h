@@ -43,14 +43,15 @@
 #include <string>
 #include <iostream>
 
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS
 
 #include <windows.h>
 
-#else //#ifdef STDLIB_VS
+#else //#ifdef PLATFORM_WINDOWS
 
 #include <cstdlib>
 #include <climits>
+#include <pthread.h>
 #include <errno.h>
 #include <semaphore.h>
 #if SEQAN_ASYNC_IO
@@ -66,24 +67,28 @@
 #define O_DIRECT 0
 #endif
 
-#endif //#ifdef STDLIB_VS
+#endif //#ifdef PLATFORM_WINDOWS
 
 #include <seqan/system/system_forwards.h>
-#ifndef STDLIB_VS
+#ifndef PLATFORM_WINDOWS
 #include <seqan/system/file_forwards.h>
-#endif  // #ifndef STDLIB_VS
+#endif  // #ifndef PLATFORM_WINDOWS
 
 //____________________________________________________________________________
 // multi-threading
 
 #include <seqan/system/system_base.h>
+#include <seqan/system/system_mutex.h>
+#include <seqan/system/system_event.h>
+#include <seqan/system/system_critical_section.h>
+#include <seqan/system/system_condition.h>
+#include <seqan/system/system_thread.h>
 
 //____________________________________________________________________________
 // synchronous and asynchronous files
 
 #include <seqan/system/file_sync.h>
 #if SEQAN_ASYNC_IO
-#include <seqan/system/system_event_win.h>
 #include <seqan/system/file_async.h>
 #endif
 #include <seqan/system/file_directory.h>

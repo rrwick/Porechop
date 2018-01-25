@@ -142,7 +142,7 @@ log2(T val)
 // we define our own Min/Max functions
 
 template<typename Tx_>
-inline
+SEQAN_HOST_DEVICE inline
 const Tx_& _min(const Tx_& _Left, const Tx_& Right_)
 {   // return smaller of _Left and Right_
     if (_Left < Right_)
@@ -152,7 +152,7 @@ const Tx_& _min(const Tx_& _Left, const Tx_& Right_)
 }
 
 template<typename Tx_, typename Ty_>
-inline
+SEQAN_HOST_DEVICE inline
 Tx_ _min(const Tx_& _Left, const Ty_& Right_)
 {   // return smaller of _Left and Right_
     return (Right_ < _Left ? Right_ : _Left);

@@ -81,20 +81,6 @@ struct BandedChainTracking
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// Function _checkScoreOverflow()
-// ----------------------------------------------------------------------------
-
-template <typename TDist,
-          typename TScoreValue, typename TScoreSpec>
-inline bool _checkScoreOverflow(TDist const distance,
-                                Score<TScoreValue, TScoreSpec> const & score)
-{
-    auto mxScore = _max(scoreMatch(score), std::abs(scoreMismatch(score)));
-    return static_cast<decltype(BitsPerValue<TScoreValue>::VALUE)>(bitScanReverse(mxScore) + bitScanReverse(distance))
-            <= BitsPerValue<TScoreValue>::VALUE - 1;
-}
-
-// ----------------------------------------------------------------------------
 // Function _isLastSeed()
 // ----------------------------------------------------------------------------
 
@@ -460,7 +446,7 @@ _computeCell(TDPScout & scout,
     typedef DPMetaColumn_<TDPProfile, TColumnDescriptor> TMetaColumnProfile;
 
     activeCell = _verticalCellInitialization(scout, traceMatrixNavigator);
-    assignValue(traceMatrixNavigator, +TraceBitMap_<>::NONE);
+    assignValue(traceMatrixNavigator, +TraceBitMap_::NONE);
     if (TrackingEnabled_<TMetaColumnProfile, TCellDescriptor>::VALUE)
         _applyBandedChainTracking(scout, traceMatrixNavigator, activeCell, TColumnDescriptor(), TCellDescriptor(), TDPProfile());
 }
@@ -482,7 +468,7 @@ _computeHorizontalInitCell(TDPScout & scout,
     typedef DPMetaColumn_<TDPProfile, TColumnDescriptor> TMetaColumnProfile;
 
     activeCell = _horizontalCellInitialization(scout, traceMatrixNavigator);
-    assignValue(traceMatrixNavigator, +TraceBitMap_<>::NONE);
+    assignValue(traceMatrixNavigator, +TraceBitMap_::NONE);
     if (TrackingEnabled_<TMetaColumnProfile, TCellDescriptor>::VALUE)
         _applyBandedChainTracking(scout, traceMatrixNavigator, activeCell, TColumnDescriptor(), TCellDescriptor(), TDPProfile());
 }
@@ -783,6 +769,7 @@ _initializeBandedChain(TTraceSet & globalTraceSet,
     // The first anchor does not cross the first row or column. Hence we have to fill the gap first.
     if (horizontalNextGridOrigin != 0u || verticalNextGridOrigin != 0u)
     {
+
         // INITIALIZATION
         _initiaizeBeginningOfBandedChain(scoutState, upperDiagonal(band) + 1, 1 - lowerDiagonal(band), scoreSchemeGap,
                                          dpProfile);
@@ -815,8 +802,6 @@ _initializeBandedChain(TTraceSet & globalTraceSet,
     TGridPoint gridEnd;
     gridEnd.i1 = _min(length(seqH), endPositionH(seed) + bandExtension);
     gridEnd.i2 = _min(length(seqV), endPositionV(seed) + bandExtension);
-
-    SEQAN_ASSERT(_checkScoreOverflow(gridEnd.i1 - gridBegin.i1 + gridEnd.i2 - gridBegin.i2, scoreSchemeGap));
 
     // Define area covering the infixes.
     infixH = infix(seqH, gridBegin.i1, gridEnd.i1);
@@ -869,10 +854,6 @@ _initializeBandedChain(TTraceSet & globalTraceSet,
             score = _computeAlignment(localTraceSet, scoutState, infixH, infixV, scoreSchemeGap, band, dpProfile);
     }
 
-    // RRW: THROW AN EXCEPTION IF THE SCORE LOOKS BAD!
-    if (score < -1000000)
-        throw std::runtime_error("Bad Seqan alignment score\n");
-
     if (gridBegin.i1 != 0u || gridBegin.i2 != 0u)
     {
         _adaptLocalTracesToGlobalGrid(localTraceSet, gridBegin);
@@ -923,8 +904,6 @@ _computeGapArea(TTraceSet & globalTraceSet,
     TGridPoint gridEnd(beginPositionH(currentSeed) + 1 + bandExtension + _horizontalBandShiftBeginPoint(currentSeed),
                        beginPositionV(currentSeed) + 1 + bandExtension + _verticalBandShiftBeginPoint(currentSeed));
 
-    SEQAN_ASSERT(_checkScoreOverflow(gridEnd.i1 - gridBegin.i1 + gridEnd.i2 - gridBegin.i2, scoreScheme));
-
     // Define infix area for alignment.
     TInfixH infixH = infix(seqH, gridBegin.i1, gridEnd.i1);
     TInfixV infixV = infix(seqV, gridBegin.i2, gridEnd.i2);
@@ -941,10 +920,6 @@ _computeGapArea(TTraceSet & globalTraceSet,
     // Compute the alignment.
     TTraceSet localTraceSet;
     TScoreValue score = _computeAlignment(localTraceSet, scoutState, infixH, infixV, scoreScheme, TBand(), dpProfile);
-
-    // RRW: THROW AN EXCEPTION IF THE SCORE LOOKS BAD!
-    if (score < -1000000)
-        throw std::runtime_error("Bad Seqan alignment score\n");
 
     // Adapt the local traces to match the positions of the  global grid.
     _adaptLocalTracesToGlobalGrid(localTraceSet, gridBegin);
@@ -1166,10 +1141,6 @@ _finishBandedChain(TTraceSet & globalTraceSet,
     score = _computeAlignment(localTraceSet, dpScoutState, suffix(seqH, gridBegin.i1), suffix(seqV,gridBegin.i2),
                               scoreSchemeGap, DPBandConfig<BandOff>(), DPProfile_<BandedChainAlignment_<TFreeEndGaps,
                               BandedChainFinalDPMatrix>, TGaps, TracebackOn<TTracebackConfig> >());
-
-    // RRW: THROW AN EXCEPTION IF THE SCORE LOOKS BAD!
-    if (score < -1000000)
-        throw std::runtime_error("Bad Seqan alignment score\n");
 
     _adaptLocalTracesToGlobalGrid(localTraceSet, gridBegin);
     if (!empty(localTraceSet))

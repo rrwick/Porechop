@@ -35,6 +35,11 @@
 #ifndef SEQAN_INDEX_FIND_INDEX_MULTIPLE_H
 #define SEQAN_INDEX_FIND_INDEX_MULTIPLE_H
 
+#ifdef PLATFORM_CUDA
+#include <thrust/sort.h>
+#include <thrust/reduce.h>
+#endif
+
 namespace seqan {
 
 // ============================================================================
@@ -152,7 +157,7 @@ struct FinderContext_<TText, TPattern, Multiple<TSpec>, TDelegate>
 //    TPatternIterator _patternIt;
     unsigned        _patternIt;
 
-    explicit
+    explicit SEQAN_HOST_DEVICE
     FinderContext_(TFinder & finder, TDelegate & delegate) :
         finder(finder),
         delegate(delegate),
@@ -167,7 +172,7 @@ struct FinderContext_<TText, TPattern, Multiple<TSpec>, TDelegate>
     {}
 
     template <typename TOther>
-    inline void
+    SEQAN_HOST_DEVICE inline void
     operator()(TOther & /* other */)
     {
         delegate(*this);
@@ -234,6 +239,20 @@ struct Member<Pattern<TNeedles, Multiple<TSpec> >, Hashes_>
     typedef Nothing Type;
 };
 
+#ifdef PLATFORM_CUDA
+template <typename TValue, typename TAlloc, typename TSSetSpec, typename TSpec>
+struct Member<Pattern<StringSet<thrust::device_vector<TValue, TAlloc>, TSSetSpec>, Multiple<TSpec> >, Hashes_>
+{
+    typedef thrust::device_vector<TValue, TAlloc>   TNeedle_;
+    typedef StringSet<TNeedle_, TSSetSpec>          TNeedles_;
+    typedef Pattern<TNeedles_, Multiple<TSpec> >    TPattern_;
+    typedef typename PatternShape_<TPattern_>::Type TShape_;
+    typedef typename Value<TShape_>::Type           THash_;
+
+    typedef thrust::device_vector<THash_>           Type;
+};
+#endif
+
 template <typename TNeedle, typename TViewSpec, typename TSSetSpec, typename TSpec>
 struct Member<Pattern<StringSet<ContainerView<TNeedle, TViewSpec>, TSSetSpec>, Multiple<TSpec> >, Hashes_>
 {
@@ -250,6 +269,18 @@ struct Member<Pattern<TNeedles, Multiple<TSpec> >, Permutation_>
 {
     typedef Nothing Type;
 };
+
+#ifdef PLATFORM_CUDA
+template <typename TValue, typename TAlloc, typename TSSetSpec, typename TSpec>
+struct Member<Pattern<StringSet<thrust::device_vector<TValue, TAlloc>, TSSetSpec>, Multiple<TSpec> >, Permutation_>
+{
+    typedef thrust::device_vector<TValue, TAlloc>   TNeedle_;
+    typedef StringSet<TNeedle_, TSSetSpec>          TNeedles_;
+    typedef typename Size<TNeedles_>::Type          TSize_;
+
+    typedef thrust::device_vector<TSize_>           Type;
+};
+#endif
 
 template <typename TNeedle, typename TViewSpec, typename TSSetSpec, typename TSpec>
 struct Member<Pattern<StringSet<ContainerView<TNeedle, TViewSpec>, TSSetSpec>, Multiple<TSpec> >, Permutation_>
@@ -279,6 +310,66 @@ struct Member<Finder_<TText, TPattern, Multiple<TSpec> >, Factory_>
 //};
 
 // ============================================================================
+// Kernels
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// Kernel _preprocessKernel()                                         [Pattern]
+// ----------------------------------------------------------------------------
+
+#ifdef PLATFORM_CUDA
+template <typename TNeedles, typename TSpec>
+SEQAN_GLOBAL void
+_preprocessKernel(Pattern<TNeedles, Multiple<TSpec> > pattern)
+{
+    typedef Pattern<TNeedles, Multiple<TSpec> >     TPattern;
+    typedef typename PatternShape_<TPattern>::Type  TShape;
+
+    unsigned threadId = getThreadId();
+
+    // Return silently if there is no job left.
+    if (threadId >= length(pattern.data_host)) return;
+
+    // Compute the hash of a needle.
+    TShape shape;
+    SEQAN_ASSERT_LEQ(weight(shape), length(pattern.data_host[threadId]));
+    pattern._hashes[threadId] = hash(shape, begin(pattern.data_host[threadId], Standard()));
+
+    // Fill with the identity permutation.
+    pattern._permutation[threadId] = threadId;
+}
+#endif
+
+// ----------------------------------------------------------------------------
+// Kernel _findKernel()                                                [Finder]
+// ----------------------------------------------------------------------------
+
+#ifdef PLATFORM_CUDA
+template <typename TText, typename TPattern, typename TSpec, typename TDelegate>
+SEQAN_GLOBAL void
+_findKernel(Finder_<TText, TPattern, Multiple<TSpec> > finder, TPattern pattern, TDelegate delegate)
+{
+    typedef FinderContext_<TText, TPattern, Multiple<TSpec>, TDelegate> TFinderContext;
+
+    unsigned threadId = getThreadId();
+
+    // Return if there is no job left.
+    if (threadId >= length(pattern.data_host)) return;
+
+    // Instantiate a thread context.
+    TFinderContext ctx(finder, delegate);
+
+    // Get the sorted needle id.
+    ctx._patternIt = pattern._permutation[threadId];
+
+    // Find a single needle.
+    clear(ctx.baseFinder);
+    _setScoreThreshold(ctx.baseFinder, _getScoreThreshold(finder));
+    _find(ctx.baseFinder, pattern.data_host[ctx._patternIt], ctx);
+}
+#endif
+
+// ============================================================================
 // Functions
 // ============================================================================
 
@@ -289,6 +380,36 @@ struct Member<Finder_<TText, TPattern, Multiple<TSpec> >, Factory_>
 template <typename TNeedles, typename TSpec>
 inline void
 _preprocess(Pattern<TNeedles, Multiple<TSpec> > & /* pattern */, ExecHost const & /* tag */) {}
+
+// ----------------------------------------------------------------------------
+// Function _preprocess()                                 [Pattern; ExecDevice]
+// ----------------------------------------------------------------------------
+
+#ifdef PLATFORM_CUDA
+template <typename TNeedles, typename TSpec>
+inline void
+_preprocess(Pattern<TNeedles, Multiple<TSpec> > & pattern, ExecDevice const & /* tag */)
+{
+    typedef Pattern<TNeedles, Multiple<TSpec> > TPattern;
+    typedef typename Size<TNeedles>::Type       TSize;
+
+    TSize needlesCount = length(needle(pattern));
+
+    resize(pattern._hashes, needlesCount, Exact());
+    resize(pattern._permutation, needlesCount, Exact());
+
+    // Compute grid size.
+    unsigned ctaSize = CtaSize<TPattern>::VALUE;
+    unsigned activeBlocks = (needlesCount + ctaSize - 1) / ctaSize;
+
+    // Launch the preprocessing kernel.
+    _preprocessKernel<<<activeBlocks, ctaSize>>>(view(pattern));
+    SEQAN_ASSERT_EQ(cudaGetLastError(), cudaSuccess);
+
+    // Sort the pattern.
+    thrust::sort_by_key(pattern._hashes.begin(), pattern._hashes.end(), pattern._permutation.begin());
+}
+#endif
 
 // ----------------------------------------------------------------------------
 // Function _preprocess()                                             [Pattern]
@@ -308,7 +429,7 @@ _preprocess(Pattern<TNeedles, Multiple<TSpec> > & pattern)
 // ----------------------------------------------------------------------------
 
 //template <typename TNeedles, typename TSpec, typename TOtherNeedles>
-//inline void
+//SEQAN_HOST_DEVICE inline void
 //setHost(Pattern<TNeedles, Multiple<TSpec> > & pattern, TOtherNeedles const & needles)
 //{
 //}
@@ -375,6 +496,41 @@ _find(Finder_<TText, TPattern, Multiple<TSpec> > & finder,
 }
 
 // ----------------------------------------------------------------------------
+// Function _find()                                        [Finder; ExecDevice]
+// ----------------------------------------------------------------------------
+
+#ifdef PLATFORM_CUDA
+template <typename TText, typename TPattern, typename TSpec, typename TDelegate>
+inline void
+_find(Finder_<TText, TPattern, Multiple<TSpec> > & finder,
+      TPattern /* const */ & pattern,
+      TDelegate & delegate,
+      ExecDevice const & /* tag */)
+{
+    typedef Finder_<TText, TPattern, Multiple<TSpec> >  TFinder;
+    typedef typename View<TFinder>::Type                TFinderView;
+
+    // NOTE(esiragusa): Use this to switch to persistent threads.
+//    unsigned activeBlocks = cudaMaxActiveBlocks(_findKernel<TTextView, TPatternsView, TSpec, TDelegateView>, ctaSize, 0);
+//    setMaxObjects(finder._factory, activeBlocks * ctaSize);
+
+    // Compute grid size.
+    unsigned ctaSize = CtaSize<TFinderView>::VALUE;
+    unsigned activeBlocks = (length(needle(pattern)) + ctaSize - 1) / ctaSize;
+
+    // Initialize the iterator factory.
+    _initFactory(finder, 33 + 1, length(needle(pattern)));
+    // TODO(esiragusa): Compute the longest pattern.
+    // NOTE(esiragusa): back/value do not work on thrust::device_vector.
+//    _initFactory(finder, length(back(needle(pattern))) + 1, length(needle(pattern)));
+
+    // Launch the find kernel.
+    _findKernel<<<activeBlocks, ctaSize>>>(view(finder), view(pattern), view(delegate));
+    SEQAN_ASSERT_EQ(cudaGetLastError(), cudaSuccess);
+}
+#endif
+
+// ----------------------------------------------------------------------------
 // Function _find()                                                    [Finder]
 // ----------------------------------------------------------------------------
 
@@ -426,14 +582,14 @@ view(Finder_<TText, TPattern, Multiple<TSpec> > & finder)
 // ----------------------------------------------------------------------------
 
 template <typename TText, typename TPattern, typename TSpec, typename TDelegate>
-inline typename TextIterator_<TText, TPattern, Multiple<TSpec> >::Type &
+inline SEQAN_HOST_DEVICE typename TextIterator_<TText, TPattern, Multiple<TSpec> >::Type &
 _textIterator(FinderContext_<TText, TPattern, Multiple<TSpec>, TDelegate> & ctx)
 {
     return _textIterator(ctx.baseFinder);
 }
 
 template <typename TText, typename TPattern, typename TSpec, typename TDelegate>
-inline typename TextIterator_<TText, TPattern, Multiple<TSpec> >::Type const &
+inline SEQAN_HOST_DEVICE typename TextIterator_<TText, TPattern, Multiple<TSpec> >::Type const &
 _textIterator(FinderContext_<TText, TPattern, Multiple<TSpec>, TDelegate> const & ctx)
 {
     return _textIterator(ctx.baseFinder);
@@ -444,7 +600,7 @@ _textIterator(FinderContext_<TText, TPattern, Multiple<TSpec>, TDelegate> const 
 // ----------------------------------------------------------------------------
 
 template <typename TText, typename TPattern, typename TSpec, typename TDelegate>
-inline typename Score_<TSpec>::Type
+SEQAN_HOST_DEVICE inline typename Score_<TSpec>::Type
 _getScore(FinderContext_<TText, TPattern, Multiple<TSpec>, TDelegate> const & ctx)
 {
     return _getScore(ctx.baseFinder);

@@ -119,7 +119,7 @@ char const * FileExtensions<GenBank, T>::VALUE[1] =
 // readGenBankHeader() for GenBank header records.
 
 template <typename TKey, typename TValue, typename TFwdIterator>
-inline SEQAN_FUNC_ENABLE_IF(Not<IsSameType<TFwdIterator, FormattedFile<Fastq, Input> > >, void)
+inline void
 readRecord(TKey & key, TValue & val, TFwdIterator & iter, GenBankHeader)
 {
     clear(key);
@@ -171,7 +171,7 @@ nextIs(TFwdIterator & iter, GenBankSequence)
 // Read all sequence, eat/ignore '//' line.
 
 template <typename TSeqString, typename TFwdIterator>
-inline SEQAN_FUNC_ENABLE_IF(Not<IsSameType<TFwdIterator, FormattedFile<Fastq, Input> > >, void)
+inline void
 readRecord(TSeqString & seq, TFwdIterator & iter, GenBankSequence)
 {
     typedef typename Value<TSeqString>::Type TSeqAlphabet;
@@ -195,13 +195,12 @@ readRecord(TSeqString & seq, TFwdIterator & iter, GenBankSequence)
 
         readUntil(seq, iter, isNewline, asserter);
     }
-    skipUntil(iter, NotFunctor<IsWhitespace>());
 }
 
 // readRecord() for GenBank id/seq pairs.
 
 template <typename TIdString, typename TSeqString, typename TFwdIterator>
-inline SEQAN_FUNC_ENABLE_IF(Not<IsSameType<TFwdIterator, FormattedFile<Fastq, Input> > >, void)
+inline void
 readRecord(TIdString & meta, TSeqString & seq, TFwdIterator & iter, GenBank)
 {
     IsWhitespace isWhite;
@@ -236,7 +235,7 @@ readRecord(TIdString & meta, TSeqString & seq, TFwdIterator & iter, GenBank)
 }
 
 template <typename TIdString, typename TSeqString, typename TQualString, typename TFwdIterator>
-inline SEQAN_FUNC_ENABLE_IF(Not<IsSameType<TFwdIterator, FormattedFile<Fastq, Input> > >, void)
+inline void
 readRecord(TIdString & meta, TSeqString & seq, TQualString & qual, TFwdIterator & iter, GenBank)
 {
     clear(qual);

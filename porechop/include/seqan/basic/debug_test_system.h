@@ -155,9 +155,9 @@
 #include <string>
 #include <typeinfo>
 
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS
 #include <Windows.h>    // DeleteFile()
-#else  // #ifdef STDLIB_VS
+#else  // #ifdef PLATFORM_WINDOWS
 #include <unistd.h>     // unlink()
 #include <sys/stat.h>   // mkdir()
 #include <dirent.h>     // DIR
@@ -166,7 +166,7 @@
 #endif  // #if SEQAN_HAS_EXECINFO
 #include <cxxabi.h>     // __cxa_demangle()
 #include <signal.h>
-#endif  // #ifdef STDLIB_VS
+#endif  // #ifdef PLATFORM_WINDOWS
 
 // ============================================================================
 // Classes
@@ -183,7 +183,7 @@ namespace seqan {
 template <typename T>
 struct Demangler
 {
-#if !defined(STDLIB_VS)
+#ifdef PLATFORM_GCC
     char *data_begin;
 #else
     const char *data_begin;
@@ -202,7 +202,7 @@ struct Demangler
 
     ~Demangler()
     {
-#if !defined(STDLIB_VS)
+#ifdef PLATFORM_GCC
         free(data_begin);
 #endif
     }
@@ -219,7 +219,7 @@ struct Demangler
 template <typename T>
 inline void _demangle(Demangler<T> & me, T const & t)
 {
-#if !defined(STDLIB_VS)
+#ifdef PLATFORM_GCC
     int status;
     me.data_begin = abi::__cxa_demangle(typeid(t).name(), NULL, NULL, &status);
 #else
@@ -640,7 +640,7 @@ struct StaticData
 /*
 inline
 int openTempFile() {
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS
     char * fileName = _tempnam(NULL, "SQN");
     if (!fileName) {
         ::std::cerr << "Cannot create a unique temporary filename" << ::std::endl;
@@ -655,7 +655,7 @@ int openTempFile() {
     int result = mkstemp(filenameBuffer);
     unlink(filenameBuffer);
     return result;
-#endif  // ifdef STDLIB_VS
+#endif  // ifdef PLATFORM_WINDOWS
 }
 */
 
@@ -665,7 +665,7 @@ inline
 const char * tempFileName()
 {
     static char fileNameBuffer[1000];
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS
     static char filePathBuffer[1000];
     //  Gets the temp path env string (no guarantee it's a valid path).
     DWORD dwRetVal = 0;
@@ -695,7 +695,7 @@ const char * tempFileName()
     strcat(fileNameBuffer, "\\test_file");
     return fileNameBuffer;
 
-#else  // ifdef STDLIB_VS
+#else  // ifdef PLATFORM_WINDOWS_VS
     strcpy(fileNameBuffer, "/tmp/SEQAN.XXXXXXXXXXXXXXXXXXXX");
     mode_t cur_umask = umask(S_IRWXO | S_IRWXG);  // to silence Coverity warning
     int _tmp = mkstemp(fileNameBuffer);
@@ -709,7 +709,7 @@ const char * tempFileName()
     strcat(fileNameBuffer, "/test_file");
     return fileNameBuffer;
 
-#endif  // ifdef STDLIB_VS
+#endif  // ifdef PLATFORM_WINDOWS
 }
 
 // Initialize the testing infrastructure.
@@ -743,7 +743,7 @@ void beginTestSuite(const char * testSuiteName, const char * argv0)
         strncpy(StaticData::basePath(), argv0, len);
     }
 
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS_VS
     // Set CRT reporting such that everything goes to stderr and there are
     // no popups causing timeouts.
     _set_error_mode(_OUT_TO_STDERR);
@@ -753,7 +753,7 @@ void beginTestSuite(const char * testSuiteName, const char * argv0)
     _CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
     _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
     _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
-#endif  // STDLIB_VS
+#endif  // PLATFORM_WINDOWS_VS
 }
 
 // cut off '/test_file' from tempFilename
@@ -770,7 +770,7 @@ std::string _stripFileName(const char * tempFilename)
 inline
 int _deleteTempFile(std::string tempFilename)
 {
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS
     HANDLE hFind;
     WIN32_FIND_DATA data;
 
@@ -783,7 +783,10 @@ int _deleteTempFile(std::string tempFilename)
             std::string tempp = tempFilename.c_str() + std::string("\\") + data.cFileName;
             if (strcmp(data.cFileName, ".") == 0 || strcmp(data.cFileName, "..") == 0)
                 continue;  // Skip these.
-            DeleteFile(tempp.c_str());
+            if (!DeleteFile(tempp.c_str()))
+            {
+                //std::cerr << "WARNING: Could not delete file " << tempp << "\n";
+            }
         }
         while (FindNextFile(hFind, &data));
         FindClose(hFind);
@@ -791,10 +794,9 @@ int _deleteTempFile(std::string tempFilename)
 
     if (!RemoveDirectory(tempFilename.c_str()))
     {
-        std::cerr << "ERROR: Could not delete directory " << tempFilename << "\n";
-        return 0;
+        //std::cerr << "WARNING: Could not delete directory " << tempFilename << "\n";
     }
-#else  // #ifdef STDLIB_VS
+#else  // #ifdef PLATFORM_WINDOWS
     DIR * dpdf;
     struct dirent * epdf;
 
@@ -810,13 +812,10 @@ int _deleteTempFile(std::string tempFilename)
 
     rmdir(tempFilename.c_str());
     if (closedir(dpdf) != 0)
-    {
-        std::cerr << "ERROR: Could not delete directory " << tempFilename << "\n";
-        return 0;
-    }
-#endif  // #ifdef STDLIB_VS
+        std::cerr << "WARNING: Could not delete directory " << tempFilename << "\n";
+#endif  // #ifdef PLATFORM_WINDOWS
 
-    return 1;
+    return 0;
 }
 
 // Run test suite finalization.
@@ -830,16 +829,15 @@ int endTestSuite()
 {
     delete[] StaticData::basePath();
 
-    // Delete all temporary files that still exist.
-    for (unsigned i = 0; i < StaticData::tempFileNames().size(); ++i)
-        if (!_deleteTempFile(StaticData::tempFileNames()[i]))
-            ++StaticData::errorCount();
-
     std::cout << "**************************************" << std::endl;
     std::cout << " Total Tests: " << StaticData::testCount() << std::endl;
     std::cout << " Skipped:     " << StaticData::skippedCount() << std::endl;
     std::cout << " Errors:      " << StaticData::errorCount() << std::endl;
     std::cout << "**************************************" << std::endl;
+
+    // Delete all temporary files that still exist.
+    for (unsigned i = 0; i < StaticData::tempFileNames().size(); ++i)
+        _deleteTempFile(StaticData::tempFileNames()[i]);
 
     if (StaticData::errorCount() != 0)
         return 1;
@@ -1739,7 +1737,7 @@ inline void fail()
 #endif  // #if SEQAN_ENABLE_TESTING
 
 
-#if SEQAN_ENABLE_DEBUG
+#if SEQAN_ENABLE_DEBUG && !defined(__CUDA_ARCH__)
 
 /*!
  * @macro AssertMacros#SEQAN_ASSERT
@@ -2257,6 +2255,27 @@ inline void fail()
         }                                                             \
     } while (false)
 
+
+#elif SEQAN_ENABLE_DEBUG && defined(__CUDA_ARCH__)
+
+#define SEQAN_ASSERT_EQ(_arg1, _arg2) do { assert(_arg1 == _arg2); } while (false)
+#define SEQAN_ASSERT_EQ_MSG(_arg1, _arg2, ...) do { assert(_arg1 == _arg2); } while (false)
+#define SEQAN_ASSERT_NEQ(_arg1, _arg2) do { assert(_arg1 != _arg2); } while (false)
+#define SEQAN_ASSERT_NEQ_MSG(_arg1, _arg2, ...) do { assert(_arg1 != _arg2); } while (false)
+#define SEQAN_ASSERT_LEQ(_arg1, _arg2) do { assert(_arg1 <= _arg2); } while (false)
+#define SEQAN_ASSERT_LEQ_MSG(_arg1, _arg2, ...) do { assert(_arg1 <= _arg2); } while (false)
+#define SEQAN_ASSERT_LT(_arg1, _arg2) do { assert(_arg1 < _arg2); } while (false)
+#define SEQAN_ASSERT_LT_MSG(_arg1, _arg2, ...) do { assert(_arg1 < _arg2); } while (false)
+#define SEQAN_ASSERT_GEQ(_arg1, _arg2) do { assert(_arg1 >= _arg2); } while (false)
+#define SEQAN_ASSERT_GEQ_MSG(_arg1, _arg2, ...) do { assert(_arg1 >= _arg2); } while (false)
+#define SEQAN_ASSERT_GT(_arg1, _arg2) do { assert(_arg1 > _arg2); } while (false)
+#define SEQAN_ASSERT_GT_MSG(_arg1, _arg2, ...) do { assert(_arg1 > _arg2); } while (false)
+#define SEQAN_ASSERT(_arg1) do { assert(_arg1); } while (false)
+#define SEQAN_ASSERT_MSG(_arg1, ...) do { assert(_arg1); } while (false)
+#define SEQAN_ASSERT_NOT(_arg1) do { assert(!_arg1); } while (false)
+#define SEQAN_ASSERT_NOT_MSG(_arg1, ...) do { assert(!_arg1); } while (false)
+#define SEQAN_ASSERT_FAIL(...) do { assert(false); } while (false)
+
 #else
 
 #define SEQAN_ASSERT_EQ(_arg1, _arg2) do {} while (false)
@@ -2277,7 +2296,7 @@ inline void fail()
 #define SEQAN_ASSERT_NOT_MSG(_arg1, ...) do {} while (false)
 #define SEQAN_ASSERT_FAIL(...) do {} while (false)
 
-#endif  // #if defined(SEQAN_ENABLE_DEBUG)
+#endif  // #if defined(SEQAN_ENABLE_DEBUG) && !defined(__CUDA_ARCH__)
 
 // Returns a string (of type char*) with the path to the called binary.
 //

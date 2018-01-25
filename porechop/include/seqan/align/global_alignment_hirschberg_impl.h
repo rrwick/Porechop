@@ -62,11 +62,31 @@ typedef Tag<Hirschberg_> Hirschberg;
 class HirschbergSet_
 {
 public:
-    unsigned x1;
-    unsigned x2;
-    unsigned y1;
-    unsigned y2;
+    int x1,x2,y1,y2;
     int score;
+
+    HirschbergSet_()
+        : x1(0), x2(0), y1(0), y2(0), score(0)
+    {}
+
+    HirschbergSet_(int a1,int a2,int b1,int b2,int sc)
+        : x1(a1), x2(a2), y1(b1), y2(b2), score(sc)
+    {
+        SEQAN_ASSERT_LEQ(a1, a2);
+        SEQAN_ASSERT_LEQ(b1, b2);
+    }
+
+    HirschbergSet_ &
+    operator=(HirschbergSet_ const & other_)
+    {
+        x1 = other_.x1;
+        x2 = other_.x2;
+        y1 = other_.y1;
+        y2 = other_.y2;
+        score = other_.score;
+        return *this;
+    }
+
 };
 
 // ============================================================================
@@ -81,13 +101,13 @@ public:
 // Function _begin1()
 // ----------------------------------------------------------------------------
 
-inline unsigned &
+inline int&
 _begin1(HirschbergSet_ & me) {
     return me.x1;
 }
 
 
-inline unsigned const &
+inline int const&
 _begin1(HirschbergSet_ const & me) {
     return me.x1;
 }
@@ -97,7 +117,7 @@ _begin1(HirschbergSet_ const & me) {
 // ----------------------------------------------------------------------------
 
 inline void
-_setBegin1(HirschbergSet_ & me, unsigned const & new_begin) {
+_setBegin1(HirschbergSet_ & me, int const & new_begin) {
     me.x1 = new_begin;
 }
 
@@ -105,12 +125,12 @@ _setBegin1(HirschbergSet_ & me, unsigned const & new_begin) {
 // Function _end1()
 // ----------------------------------------------------------------------------
 
-inline unsigned &
+inline int&
 _end1(HirschbergSet_ & me) {
     return me.x2;
 }
 
-inline unsigned const &
+inline int const&
 _end1(HirschbergSet_ const & me) {
     return me.x2;
 }
@@ -120,7 +140,7 @@ _end1(HirschbergSet_ const & me) {
 // ----------------------------------------------------------------------------
 
 inline void
-_setEnd1(HirschbergSet_ & me, unsigned const & new_end) {
+_setEnd1(HirschbergSet_ & me, int const & new_end) {
     me.x2 = new_end;
 }
 
@@ -128,12 +148,12 @@ _setEnd1(HirschbergSet_ & me, unsigned const & new_end) {
 // Function _begin2()
 // ----------------------------------------------------------------------------
 
-inline unsigned &
+inline int&
 _begin2(HirschbergSet_ & me) {
     return me.y1;
 }
 
-inline unsigned const &
+inline int const&
 _begin2(HirschbergSet_ const & me) {
     return me.y1;
 }
@@ -143,7 +163,7 @@ _begin2(HirschbergSet_ const & me) {
 // ----------------------------------------------------------------------------
 
 inline void
-_setBegin2(HirschbergSet_ & me, unsigned const & new_begin) {
+_setBegin2(HirschbergSet_ & me, int const & new_begin) {
     me.y1 = new_begin;
 }
 
@@ -151,12 +171,12 @@ _setBegin2(HirschbergSet_ & me, unsigned const & new_begin) {
 // Function _end2()
 // ----------------------------------------------------------------------------
 
-inline unsigned &
+inline int&
 _end2(HirschbergSet_ & me) {
     return me.y2;
 }
 
-inline unsigned const &
+inline int const&
 _end2(HirschbergSet_ const & me) {
     return me.y2;
 }
@@ -166,7 +186,7 @@ _end2(HirschbergSet_ const & me) {
 // ----------------------------------------------------------------------------
 
 inline void
-_setEnd2(HirschbergSet_ & me, unsigned const & new_end) {
+_setEnd2(HirschbergSet_ & me, int const & new_end) {
     me.y2 = new_end;
 }
 
@@ -174,7 +194,7 @@ _setEnd2(HirschbergSet_ & me, unsigned const & new_end) {
 // Function _score()
 // ----------------------------------------------------------------------------
 
-inline int &
+inline int&
 _score(HirschbergSet_ & me)    {
     return me.score;
 }
@@ -183,7 +203,7 @@ _score(HirschbergSet_ & me)    {
 // Function _score()
 // ----------------------------------------------------------------------------
 
-inline int const &
+inline int const&
 _score(HirschbergSet_ const & me)
 {
     return me.score;
@@ -383,7 +403,7 @@ _globalAlignment(Gaps<TSequenceH, TGapsSpecH> & gapsH,
     String<TScoreValue> c_score;
     resize(c_score,len2 + 1);
     // string to strore the backpointers
-    String<unsigned> pointer;
+    String<int> pointer;
     resize(pointer,len2 + 1);
 
     // scoring-scheme specific score values
@@ -397,9 +417,9 @@ _globalAlignment(Gaps<TSequenceH, TGapsSpecH> & gapsH,
     std::stack<HirschbergSet_> to_process;
     HirschbergSet_ target;
 
-    unsigned i,j;
+    int i,j;
 
-    HirschbergSet_ hs_complete{0, static_cast<unsigned>(len1), 0, static_cast<unsigned>(len2), 0};
+    HirschbergSet_ hs_complete(0,len1,0,len2,0);
     to_process.push(hs_complete);
 
     while(!to_process.empty())
@@ -597,7 +617,7 @@ _globalAlignment(Gaps<TSequenceH, TGapsSpecH> & gapsH,
                 using a backpointer to remember the position where the optimal alignment passes
                 the mid column
             */
-            unsigned mid = static_cast<unsigned>(floor( static_cast<double>((_begin1(target) + _end1(target))/2) ));
+            int mid = static_cast<int>(floor( static_cast<double>((_begin1(target) + _end1(target))/2) ));
 
 #ifdef SEQAN_HIRSCHBERG_DEBUG_CUT
             std::cout << "calculate cut for s1 " << _begin1(target) << " to " << _end1(target) << " and s2 " << _begin2(target) << " to " << _end2(target) << std::endl;
@@ -681,8 +701,8 @@ _globalAlignment(Gaps<TSequenceH, TGapsSpecH> & gapsH,
             std::cout << "requested position in c_score and pointer is " << _end2(target) << std::endl;
             std::cout << "alignment score is " << c_score[_end2(target)] << std::endl << std::endl;
 #endif
-            to_process.push(HirschbergSet_{mid, _end1(target), pointer[_end2(target)], _end2(target), 0});
-            to_process.push(HirschbergSet_{_begin1(target), mid, _begin2(target), pointer[_end2(target)], 0});
+            to_process.push(HirschbergSet_(mid,_end1(target),pointer[_end2(target)],_end2(target),0));
+            to_process.push(HirschbergSet_(_begin1(target),mid,_begin2(target),pointer[_end2(target)],0));
         }
         /* END CUT */
     }

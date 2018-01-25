@@ -74,7 +74,6 @@
 #endif  // #ifdef SEQAN_PARALLEL
 
 #include <seqan/index/index_base.h>
-#include <seqan/index/index_bidirectional.h>
 
 #include <seqan/index/find_index_binary.h>
 
@@ -136,7 +135,6 @@
 
 #include <seqan/index/index_esa_base.h>
 #include <seqan/index/index_esa_stree.h>
-#include <seqan/index/index_bidirectional_stree.h>
 #include <seqan/index/index_wotd.h>
 #include <seqan/index/index_dfi.h>
 #include <seqan/index/index_sa_stree.h>
@@ -172,13 +170,6 @@
 #include <seqan/index/index_fm_stree.h>
 
 // ----------------------------------------------------------------------------
-// Bidirectional FM index.
-// ----------------------------------------------------------------------------
-
-#include <seqan/index/index_bifm.h>
-#include <seqan/index/index_bifm_stree.h>
-
-// ----------------------------------------------------------------------------
 // Suffix tree algorithms.
 // ----------------------------------------------------------------------------
 
@@ -205,6 +196,10 @@
 // ----------------------------------------------------------------------------
 
 #include <seqan/index/index_view.h>
+// NOTE(esiragusa): CUDA FM-index is broken.
+//#ifdef PLATFORM_CUDA
+//#include <seqan/index/index_device.h>
+//#endif
 
 // ==========================================================================
 // Finder interface.

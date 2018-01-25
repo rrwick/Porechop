@@ -33,13 +33,13 @@
 // Author: Manuel Holtgrewe <manuel.holtgrewe@fu-berlin.de>
 // ==========================================================================
 // Various useful bit-twiddling routines, mostly taken from the website
-// https://graphics.stanford.edu/~seander/bithacks.html
+// http://www-graphics.stanford.edu/~seander/bithacks.html
 // ==========================================================================
 
 #ifndef SEQAN_MISC_BIT_TWIDDLING_H_
 #define SEQAN_MISC_BIT_TWIDDLING_H_
 
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS_VS
 
 // Make intrinsics visible.  It appears that this is not necessary with VS 10
 // any more, for VS 9, it must be included.
@@ -49,7 +49,7 @@
 #include <nmmintrin.h>
 #endif
 
-#endif  // #ifdef STDLIB_VS
+#endif  // #ifdef PLATFORM_WINDOWS_VS
 
 // TODO(holtgrew): Test this!
 
@@ -133,7 +133,7 @@ template <typename TWord, typename TPos>
 inline void
 setBitTo(TWord & word, TPos index, bool value)
 {
-    // See http://graphics.stanford.edu/~seander/bithacks.html#ConditionalSetOrClearBitsWithoutBranching
+    // See http://www-graphics.stanford.edu/~seander/bithacks.html#ConditionalSetOrClearBitsWithoutBranching
     word = (word & ~(1u << index)) | (-value & (1u << index));
 }
 
@@ -232,7 +232,7 @@ isBitSet(TWord word, TIndex index)
 // ----------------------------------------------------------------------------
 
 template <typename TWord, typename TPos>
-inline TWord
+SEQAN_HOST_DEVICE inline TWord
 hiBits(TWord word, TPos index)
 {
     return word & ~((TWord(1) << (BitsPerValue<TWord>::VALUE - index)) - TWord(1));
@@ -256,6 +256,7 @@ hiBits(TWord word, TPos index)
  */
 
 template <typename TWord>
+SEQAN_HOST_DEVICE
 inline unsigned
 popCount(TWord word)
 {
@@ -271,8 +272,36 @@ popCount(TWord word)
 // the types unsigned, unsigned long, and unsigned long long.  Starting with version 2008, Visual C++ provides the
 // intrinsics __popcnt16, __popcnt, and __popcnt64 for 16, 32, and 64 bit words.
 
+#if defined(__CUDA_ARCH__)
+
+// ----------------------------------------------------------------------------
+// Function _popCountImpl()
+// ----------------------------------------------------------------------------
+// CUDA implementations.
+
+template <typename TWord>
+SEQAN_DEVICE
+inline unsigned _popCountImpl(TWord word, WordSize_<32> const & /*tag*/)
+{
+    return __popc(static_cast<uint32_t>(word));
+}
+
+template <typename TWord>
+SEQAN_DEVICE
+inline unsigned _popCountImpl(TWord word, WordSize_<16> const & /*tag*/)
+{
+    return __popc(static_cast<uint32_t>(word));
+}
+
+template <typename TWord>
+SEQAN_DEVICE
+inline unsigned _popCountImpl(TWord word, WordSize_<8> const & /*tag*/)
+{
+    return __popc(static_cast<uint32_t>(word));
+}
+
 // MSVC >= 2008, has intrinsic
-#if defined(COMPILER_MSVC) || defined(COMPILER_WINTEL)
+#elif defined(_MSC_VER)   // #if !defined(__CUDA_ARCH__) && defined(_MSC_VER)
 
 // ----------------------------------------------------------------------------
 // Function _popCountImpl()
@@ -288,8 +317,6 @@ _popCountImpl(TWord word, WordSize_<64> const & /*tag*/)
 #if defined(__SSE4_2__)
     // 64-bit Windows, SSE4.2 bit intrinsic available
     return _mm_popcnt_u64(static_cast<uint64_t>(word));
-#elif defined(COMPILER_WINTEL)
-    return _popcnt64(static_cast<uint64_t>(word));
 #else
     // 64-bit Windows, 64 bit intrinsic available
     return __popcnt64(static_cast<uint64_t>(word));
@@ -298,8 +325,7 @@ _popCountImpl(TWord word, WordSize_<64> const & /*tag*/)
 #else // #if defined(_WIN64)
 
     // 32-bit Windows, 64 bit intrinsic not available
-    return  _popCountImpl(static_cast<const uint32_t>(word), WordSize_<32>())
-          + _popCountImpl(static_cast<const uint32_t>(word >> 32), WordSize_<32>());
+    return __popcnt(static_cast<uint32_t>(word)) + __popcnt(static_cast<uint32_t>(word >> 32));
 
 #endif // #if defined(_WIN64)
 }
@@ -311,8 +337,6 @@ _popCountImpl(TWord word, WordSize_<32> const & /*tag*/)
 #if defined(__SSE4_2__)
     // SSE4.2 bit intrinsic available
     return _mm_popcnt_u32(static_cast<uint32_t>(word));
-#elif defined(COMPILER_WINTEL)
-    return _popcnt32(static_cast<uint32_t>(word));
 #else
     return __popcnt(static_cast<uint32_t>(word));
 #endif
@@ -333,7 +357,7 @@ _popCountImpl(TWord word, WordSize_<8> const & /*tag*/)
 }
 
 // GCC or CLANG
-#elif !(defined(COMPILER_MSVC) || defined(COMPILER_WINTEL))
+#elif !defined(_MSC_VER)  // #if !defined(__CUDA_ARCH__) && !defined(_MSC_VER)
 
 // ----------------------------------------------------------------------------
 // Function _popCountImpl()
@@ -345,14 +369,14 @@ template <typename TWord>
 inline unsigned
 _popCountImpl(TWord word, WordSize_<64> const & /*tag*/)
 {
-    return __builtin_popcountll(static_cast<uint64_t>(word));
+    return __builtin_popcountll(static_cast<unsigned long long>(word));
 }
 
 template <typename TWord>
 inline unsigned
 _popCountImpl(TWord word, WordSize_<32> const & /*tag*/)
 {
-    return __builtin_popcount(static_cast<uint32_t>(word));
+    return __builtin_popcount(static_cast<unsigned int>(word));
 }
 
 template <typename TWord>
@@ -369,7 +393,7 @@ _popCountImpl(TWord word, WordSize_<8> const & /*tag*/)
     return _popCountImpl(static_cast<uint32_t>(word), WordSize_<32>());
 }
 
-#endif // #if !(defined(COMPILER_MSVC) || defined(COMPILER_WINTEL))
+#endif // #if !defined(__CUDA_ARCH__) && !defined(_MSC_VER)
 
 // ----------------------------------------------------------------------------
 // Function printBits()
@@ -490,7 +514,7 @@ _bitScanReverse(TWord word, WordSize_<NUM_BITS>)
 // Function _bitScanForwardGeneric()                     [Platform independent]
 // ----------------------------------------------------------------------------
 
-// bitScanForward implementations for 64 and 32 bit values using DeBruijn sequence by Martin Lï¿½uter, Charles E. Leiserson,
+// bitScanForward implementations for 64 and 32 bit values using DeBruijn sequence by Martin LŠuter, Charles E. Leiserson,
 // Harald Prokop and Keith H. Randall; "Using de Bruijn Sequences to Index a 1 in a Computer Word"; (1997)
 
 // Note, the cast of word to a signed integer is necessary to fix compiler warning C4146 on Windows platforms.
@@ -519,10 +543,7 @@ _bitScanForward(TWord word, WordSize_<NUM_BITS>)
     return _bitScanForwardGeneric(word, WordSize_<NUM_BITS>());
 }
 
-// NOTE(marehr): The Intel compiler on windows behaves the same as the visual
-// studio compiler and on *nix the same as gcc. Thus, the __builtin_clz is only
-// available on *nix.
-#if defined(COMPILER_GCC) || defined(COMPILER_CLANG) || defined(COMPILER_LINTEL)
+#if defined(PLATFORM_GCC)
 
 template <typename TWord>
 inline TWord
@@ -553,7 +574,7 @@ _bitScanForward(TWord word, WordSize_<32>)
     return __builtin_ctz(static_cast<unsigned int>(word));
 }
 
-#elif defined(STDLIB_VS) // #if !(defined(COMPILER_GCC) || defined(COMPILER_CLANG) || defined(COMPILER_LINTEL)) && defined(STDLIB_VS)
+#elif defined(PLATFORM_WINDOWS) // #if !defined(PLATFORM_GCC) && defined(PLATFORM_WINDOWS)
 
 #if (SEQAN_IS_64_BIT)
 
@@ -624,7 +645,7 @@ _bitScanForward(TWord word, WordSize_<32>)
     _BitScanForward(&index, static_cast<unsigned long>(word));
     return index;
 }
-#endif  // #if !(defined(COMPILER_GCC) || defined(COMPILER_CLANG) || defined(COMPILER_LINTEL)) && defined(STDLIB_VS)
+#endif  // #if !defined(PLATFORM_GCC) && defined(PLATFORM_WINDOWS)
 
 // ----------------------------------------------------------------------------
 // Function bitScanReverse()

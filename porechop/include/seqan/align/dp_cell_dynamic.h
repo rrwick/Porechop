@@ -45,24 +45,6 @@ namespace seqan {
 // Forwards
 // ============================================================================
 
-// ----------------------------------------------------------------------------
-// Metafunction GetFlagMaskType
-// ----------------------------------------------------------------------------
-
-namespace impl
-{
-namespace dp_cell
-{
-template <typename TScoreValue>
-struct FlagMaskType
-{
-    using Type = typename If<Is<SimdVectorConcept<TScoreValue> >,
-                             TScoreValue,
-                             uint8_t>::Type;
-};
-}  // namespace dp_cell
-}  // namespace impl
-
 // ============================================================================
 // Tags, Classes, Enums
 // ============================================================================
@@ -89,43 +71,39 @@ template <typename TScoreValue>
 class DPCell_<TScoreValue, DynamicGaps>
 {
 public:
-    using TFlagMaskType = typename impl::dp_cell::FlagMaskType<TScoreValue>::Type;
+    TScoreValue _score;
+    char _flagMask;
 
-    TScoreValue     _score      = DPCellDefaultInfinity<DPCell_>::VALUE;
-    TFlagMaskType   _flagMask   = TFlagMaskType();
-
-    DPCell_() = default;
-    
-    // Copy c'tor.
-    DPCell_(DPCell_ const & other) : _score(other._score), _flagMask(other._flagMask)
+    // The default c'tor.
+    DPCell_() : _score(DPCellDefaultInfinity<DPCell_>::VALUE), _flagMask(0)
     {}
 
-    // Move c'tor.
-    DPCell_(DPCell_ && other) : DPCell_()
-    {
-        swap(*this, other);
-    }
-
-    // Construct with score.
-    DPCell_(TScoreValue const & pScore) : _score(pScore)
+    // The copy c'tor.
+    DPCell_(DPCell_<TScoreValue, DynamicGaps> const & other) : _score(other._score), _flagMask(other._flagMask)
     {}
-    
-    // Assignment and move operator.
-    DPCell_& operator=(DPCell_ other)
+
+    // Implicit c'tor.
+    DPCell_(TScoreValue const & score) : _score(score), _flagMask(0)
+    {}
+
+    // The assignment operator.
+    DPCell_ &
+    operator=(DPCell_<TScoreValue, DynamicGaps> const & other)
     {
-        swap(*this, other);
+        if (this != &other)
+        {
+            _score = other._score;
+            _flagMask = other._flagMask;
+        }
         return *this;
     }
 
-    // Assignment of score.
     DPCell_ &
     operator=(TScoreValue const & score)
     {
         _score = score;
         return *this;
     }
-    
-    ~DPCell_() = default;
 };
 
 // ============================================================================
@@ -186,9 +164,8 @@ inline void _setBit(DPCell_<TScoreValue, DynamicGaps> & cell,
 }
 
 template <typename TScoreValue, typename TSpec>
-inline SEQAN_FUNC_ENABLE_IF(Not<Is<SimdVectorConcept<TScoreValue> > >,bool)
-isGapExtension(DPCell_<TScoreValue, DynamicGaps> const & cell,
-               TSpec const & /*spec*/)
+inline bool isGapExtension(DPCell_<TScoreValue, DynamicGaps> const & cell,
+                           TSpec const & /*spec*/)
 {
     if (IsSameType<TSpec, DynamicGapExtensionHorizontal>::VALUE)
         return cell._flagMask & MASK_HORIZONTAL_GAP;
@@ -196,31 +173,13 @@ isGapExtension(DPCell_<TScoreValue, DynamicGaps> const & cell,
         return cell._flagMask & MASK_VERTICAL_GAP;
 }
 
-template <typename TScoreValue, typename TSpec>
-inline SEQAN_FUNC_ENABLE_IF(Is<SimdVectorConcept<TScoreValue> >,TScoreValue)
-isGapExtension(DPCell_<TScoreValue, DynamicGaps> const & cell,
-               TSpec const & /*spec*/)
-{
-    return blend(cell._flagMask & createVector<TScoreValue>(MASK_VERTICAL_GAP),
-                 cell._flagMask & createVector<TScoreValue>(MASK_HORIZONTAL_GAP),
-                 createVector<TScoreValue>(IsSameType<TSpec, DynamicGapExtensionHorizontal>::VALUE));
-}
-
 template <typename TScoreValue, typename TFlagV, typename TFlagH>
-inline SEQAN_FUNC_ENABLE_IF(Not<Is<SimdVectorConcept<TScoreValue> > >, void)
+inline void
 setGapExtension(DPCell_<TScoreValue, DynamicGaps> & cell,
-                TFlagV const & /*vert*/, TFlagH const & /*hori*/)
+                TFlagV const & /*vert*/,
+                TFlagH const & /*hori*/)
 {
     cell._flagMask = SetGapExtension<DPCell_<TScoreValue, DynamicGaps>, TFlagV, TFlagH>::VALUE;
-}
-
-template <typename TScoreValue, typename TFlagV, typename TFlagH>
-inline SEQAN_FUNC_ENABLE_IF(Is<SimdVectorConcept<TScoreValue> >, void)
-setGapExtension(DPCell_<TScoreValue, DynamicGaps> & cell,
-                TFlagV const & /*vert*/, TFlagH const & /*hori*/,
-                TScoreValue const & cmp)
-{
-    cell._flagMask = blend(cell._flagMask, createVector<TScoreValue>(SetGapExtension<DPCell_<TScoreValue, DynamicGaps>, TFlagV, TFlagH>::VALUE), cmp);
 }
 
 // ----------------------------------------------------------------------------
@@ -233,15 +192,6 @@ inline bool operator<(DPCell_<TScoreValueLeft, DynamicGaps> const & left,
                       DPCell_<TScoreValueRight, DynamicGaps> const & right)
 {
     return left._score < right._score;
-}
-
-template <typename TScoreValue>
-inline void
-swap(DPCell_<TScoreValue, DynamicGaps> & lhs,
-     DPCell_<TScoreValue, DynamicGaps> & rhs)
-{
-    std::swap(lhs._score, rhs._score);
-    std::swap(lhs._flagMask, rhs._flagMask);
 }
 
 }  // namespace seqan

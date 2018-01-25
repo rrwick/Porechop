@@ -177,7 +177,7 @@ public:
     Pattern(TNeedle && needle,
             SEQAN_CTOR_DISABLE_IF(IsSameType<typename std::remove_reference<TNeedle>::type const &, Pattern const &>))
     {
-        ignoreUnusedVariableWarning(dummy);
+        ignoreUnusedVaraiableWarning(dummy);
         setHost(*this, std::forward<TNeedle>(needle));
     }
 

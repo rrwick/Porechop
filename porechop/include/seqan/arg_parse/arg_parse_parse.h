@@ -38,7 +38,6 @@
 #include <seqan/arg_parse/arg_parse_option.h>
 #include <seqan/arg_parse/argument_parser.h>
 #include <seqan/arg_parse/arg_parse_ctd_support.h>
-#include <seqan/arg_parse/arg_parse_version_check.h>
 
 namespace seqan {
 
@@ -191,9 +190,9 @@ private:
             // If everything is fine then we can assign the value to the option.
             _assignArgumentValue(opt, val);
         }
-        else if (isFlagOption(opt))
+        else if (isBooleanOption(opt))
         {
-            // Handling flag options is simple.
+            // Handling boolean options is simple.
             _assignArgumentValue(opt, "true");
         }
         else
@@ -229,8 +228,8 @@ private:
                     ArgParseOption & opt = getOption(parser, arg.substr(s, e - s));
                     s = --e;  // advance in squished options;  s > e if at end
 
-                    // Flag options are easy to handle.
-                    if (isFlagOption(opt))
+                    // Boolean options are easy to handle.
+                    if (isBooleanOption(opt))
                     {
                         _assignArgumentValue(opt, "true");
                         continue;
@@ -307,22 +306,6 @@ ArgumentParser::ParseResult parse(ArgumentParser & me,
         errorStream << getAppName(me) << ": " << ex.what() << std::endl;
         return ArgumentParser::PARSE_ERROR;
     }
-
-#ifndef SEQAN_DISABLE_VERSION_CHECK
-    // do version check if not turned off by the user
-    bool check_version = false;
-    getOptionValue(check_version, me, "version-check");
-
-    if (check_version)
-    {
-        VersionCheck app_version(toCString(me._toolDoc._name),
-                                 toCString(me._toolDoc._version),
-                                 errorStream);
-        std::promise<bool> appVersionProm;
-        me.appVersionCheckFuture = appVersionProm.get_future();
-        app_version(std::move(appVersionProm));
-    }
-#endif  // !SEQAN_DISABLE_VERSION_CHECK
 
     // Handle the special options.
     if (hasOption(me, "version") && isSet(me, "version"))

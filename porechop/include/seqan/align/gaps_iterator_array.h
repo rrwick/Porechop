@@ -484,7 +484,7 @@ goFurther(Iter<TGaps, GapsIterator<ArrayGaps> > & it,
 // Function atBegin()
 // ----------------------------------------------------------------------------
 
-// TODO(holtgrew): Non-const version is superfluous :(
+// TODO(holtgrew): Non-const version is superflous :(
 template <typename TGaps>
 inline bool
 atBegin(Iter<TGaps, GapsIterator<ArrayGaps> > const & it)
@@ -503,7 +503,7 @@ atBegin(Iter<TGaps, GapsIterator<ArrayGaps> > & it)
 // Function atEnd()
 // ----------------------------------------------------------------------------
 
-// TODO(holtgrew): Non-const version is superfluous :(
+// TODO(holtgrew): Non-const version is superflous :(
 template <typename TGaps>
 inline bool
 atEnd(Iter<TGaps, GapsIterator<ArrayGaps> > const & it)

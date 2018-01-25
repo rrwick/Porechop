@@ -63,19 +63,15 @@ namespace seqan
  * @tparam TAlignRow0 Type of the first alignment row, usually @link Gaps @endlink
  * @tparam TAlignRow1 Type of the second alignment row, usually @link Gaps @endlink
  * @tparam TPos   Position type of the sequences, defaults to <tt>uint32_t</tt>
- * @tparam TQId   Type of qId, defaults to <tt>std::string</tt>
- * @tparam TSId   Type of sId, defaults to <tt>std::string</tt>
- * @tparam TSAccs Type of sAccs, defaults to <tt>std::vector</tt> of <tt>std::string</tt>
- * @tparam TSTaxIds Type of sTaxIds, defaults to @link String @endlink of <tt>uint32_t</tt>
+ * @tparam TQId   Type of qId, defaults to std::string
+ * @tparam TSId   Type of sId, defaults to std::string
  */
 
 template <typename TAlignRow0_ = Gaps<CharString, ArrayGaps>,
           typename TAlignRow1_ = Gaps<CharString, ArrayGaps>,
           typename TPos_ = uint32_t,
           typename TQId_ = std::string,
-          typename TSId_ = std::string,
-          typename TSAccs_ = std::vector<std::string>,
-          typename TSTaxIds_ = String<uint32_t>>
+          typename TSId_ = std::string>
 struct BlastMatch
 {
     typedef TAlignRow0_ TAlignRow0;
@@ -83,8 +79,6 @@ struct BlastMatch
     typedef TPos_ TPos;
     typedef TQId_ TQId;
     typedef TSId_ TSId;
-    typedef TSAccs_     TSAccs;
-    typedef TSTaxIds_   TSTaxIds;
 
     // internal use numerical ids
     uint32_t _n_qId;
@@ -93,25 +87,12 @@ struct BlastMatch
     /*!
      * @var TQId BlastMatch::qId;
      * @brief The verbose Id of the query.
-     * @deprecated Use @link BlastRecord::qId @endlink instead.
      *
      * @var TSId BlastMatch::sId;
      * @brief The verbose Id of the subject.
      */
-    TQId            qId; // deprecated but can't be marked as such, since still supported/used
+    TQId            qId;
     TSId            sId;
-
-    /*!
-     * @var TSId BlastMatch::sAccs;
-     * @brief The Accession number(s) of the subject.
-     */
-    TSAccs          sAccs;
-
-    /*!
-     * @var TSId BlastMatch::sTaxIds;
-     * @brief The taxonomic ID(s) of the subject.
-     */
-    TSTaxIds        sTaxIds;
 
     /*!
      * @var TPos BlastMatch::qStart;
@@ -134,14 +115,12 @@ struct BlastMatch
     /*!
      * @var TPos BlastMatch::qLength;
      * @brief The length of the original query sequence (possibly before translation).
-     * @deprecated Use @link BlastRecord::qLength @endlink instead.
      *
      * @var TPos BlastMatch::sLength;
      * @brief The length of the original subject sequence (possibly before translation).
      */
-    TPos            qLength       = 0; // deprecated but can't be marked as such, since still supported/used
+    TPos            qLength       = 0;
     TPos            sLength       = 0;
-
     /*!
      * @var char BlastMatch::qFrameShift;
      * @brief An indicator for query frame and query strand.
@@ -192,29 +171,18 @@ struct BlastMatch
      * @fn BlastMatch::BlastMatch()
      * @brief Constructor, can be called with arguments for qId and sId.
      * @signature BlastMatch::BlastMatch()
-     * BlastMatch::BlastMatch(sId)
-     * BlastMatch::BlastMatch(qId, sId) [deprecated]
+     * BlastMatch::BlastMatch(qId, sId)
      */
     BlastMatch() :
         qId(TQId()), sId(TSId())
     {}
 
-    [[deprecated("Only pass sId to the constructor")]]
     BlastMatch(TQId const & _qId, TSId const & _sId) :
         qId(_qId), sId(_sId)
     {}
 
-    [[deprecated("Only pass sId to the constructor")]]
     BlastMatch(TQId && _qId, TSId && _sId) :
         qId(std::move(_qId)), sId(std::move(_sId))
-    {}
-
-    BlastMatch(TSId const & _sId) :
-        sId(_sId)
-    {}
-
-    BlastMatch(TSId && _sId) :
-        sId(std::move(_sId))
     {}
 
     inline bool operator==(BlastMatch const & bm2) const
@@ -273,8 +241,6 @@ struct BlastMatch
     {
         clear(qId);
         clear(sId);
-        clear(sAccs);
-        clear(sTaxIds);
 
         qStart        = 0;
         qEnd          = 0;
@@ -296,8 +262,6 @@ struct BlastMatch
     {
         qId           = "not init";
         sId           = "not init";
-        clear(sAccs);
-        clear(sTaxIds);
 
         qStart        = std::numeric_limits<TPos>::max();
         qEnd          = std::numeric_limits<TPos>::max();
@@ -360,34 +324,22 @@ clear(BlastMatch<TAlignRow0, TAlignRow1, TPos, TQId, TSId> & match)
  * @class BlastRecord
  * @implements FormattedFileRecordConcept
  * @headerfile <seqan/blast.h>
- * @signature struct BlastRecord<TMatch, ...> { ... };
+ * @signature struct BlastRecord<TMatch> { ... };
  * @brief A record of blast-matches (belonging to one query).
  *
  * @tparam TMatch Specialization of @link BlastMatch @endlink
- * @tparam TQID   Type of @link BlastRecord::qId @endlink, defaults to TMatch::TQId
- * @tparam TQAccs Type of @link BlastRecord::qAccs @endlink, defaults to <tt>std::vector</tt> of <tt>std::string</tt>
- * @tparam TLcaId Type of @link BlastRecord::lcaId @endlink, defaults to <tt>std::string</tt>
- * @tparam TLcaTaxId Type of @link BlastRecord::lcaTaxId @endlink, defaults to <tt>uint32_t</tt>
  */
 
-template <typename TBlastMatch_ = BlastMatch<>,
-          typename TQId_ = typename TBlastMatch_::TQId,
-          typename TQAccs_ = std::vector<std::string>,
-          typename TLcaId_ = std::string,
-          typename TLcaTaxId_ = uint32_t>
+template <typename TBlastMatch_ = BlastMatch<>>
 struct BlastRecord
 {
-    typedef TQId_       TQId;
-    typedef TQAccs_     TQAccs;
-    typedef TLcaId_     TLcaId;
-    typedef TLcaTaxId_  TLcaTaxId;
-
     /*!
      * @typedef BlastRecord::TBlastMatch
      * @signature typedef TBlastMatch_ TBlastMatch;
      * @brief type of the contained matches
      */
     typedef TBlastMatch_                TBlastMatch;
+    typedef typename TBlastMatch::TQId  TQId;
     typedef typename TBlastMatch::TPos  TPos;
 
     /*!
@@ -400,13 +352,7 @@ struct BlastRecord
      * @var TPos BlastRecord::qLength;
      * @brief length of the query sequence
      */
-    TPos            qLength = 0;
-
-    /*!
-     * @var TQId BlastRecord::qAccs;
-     * @brief The Accession number(s) of the query.
-     */
-    TQAccs          qAccs;
+    TPos            qLength;
 
     /*!
      * @var std::list<TBlastMatch> BlastRecord::matches;
@@ -415,48 +361,33 @@ struct BlastRecord
     std::list<TBlastMatch>  matches;
 
     /*!
-     * @var TPos BlastRecord::lcaId;
-     * @brief String identifier (e.g. scientific name) of the lowest common ancestor of all matches.
-     */
-    TLcaId            lcaId;
-
-    /*!
-     * @var TPos BlastRecord::lcaTaxId;
-     * @brief Numeric taxonomic identifier of the lowest common ancestor of all matches.
-     */
-    TLcaTaxId            lcaTaxId = 0;
-
-    /*!
      * @fn BlastRecord::BlastRecord()
      * @brief constructor, can be passed the qId
      * @signature BlastRecord::BlastRecord()
      * BlastRecord::BlastRecord(qid)
      */
     BlastRecord() :
-        qId(TQId())
+        qId(TQId()), qLength(0), matches()
     {}
 
     BlastRecord(TQId const & _qId) :
-        qId(_qId)
+        qId(_qId), qLength(0), matches()
     {}
 
     BlastRecord(TQId && _qId) :
-        qId(std::move(_qId))
+        qId(std::move(_qId)), qLength(0), matches()
     {}
 
     // copy, move and assign implicitly
 };
 
-template <typename ... TSpecs>
+template <typename TMatch>
 inline void
-clear(BlastRecord<TSpecs...> & blastRecord)
+clear(BlastRecord<TMatch> & blastRecord)
 {
     clear(blastRecord.qId);
     blastRecord.qLength = 0;
-    clear(blastRecord.qAccs);
     clear(blastRecord.matches);
-    clear(blastRecord.lcaId);
-    blastRecord.lcaTaxId = 0;
 }
 
 }

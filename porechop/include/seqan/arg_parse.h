@@ -48,13 +48,9 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifndef STDLIB_VS
+#ifndef PLATFORM_WINDOWS
 #include <unistd.h>
 #endif
-
-#include <regex>
-#include <vector>
-#include <algorithm>
 
 // ===========================================================================
 // The ArgParse Headers.
@@ -74,6 +70,5 @@
 #include <seqan/arg_parse/arg_parse_ctd_support.h>
 #include <seqan/arg_parse/arg_parse_parse.h>
 
-#include <seqan/arg_parse/arg_parse_version_check.h>
 
 #endif  // SEQAN_INCLUDE_SEQAN_ARG_PARSE_H_

@@ -48,13 +48,6 @@ namespace seqan {
 // Tags, Classes, Enums
 // ============================================================================
 
-// NOTE(rrahn): Special alloc overload for over-aligned data, e.g., simd vector types.
-// We need this, since the standard new/delete operator are not guarenteed
-// to support alignment higher than sizeof(void *), which causes seg faults when holding
-// simd vector types in a string.
-struct OverAligned_;
-using OverAligned = Tag<OverAligned_>;
-
 template <typename TSpec = void>
 struct Alloc {};
 
@@ -343,16 +336,6 @@ struct StringSpec<String<TValue, TSpec> >
 };
 
 // ----------------------------------------------------------------------------
-// Metafunction StringSpecForValue_
-// ----------------------------------------------------------------------------
-
-template <typename TValue>
-struct StringSpecForValue_
-{
-    typedef typename If<Is<SimdVectorConcept<TValue> >, Alloc<OverAligned>, Alloc<> >::Type Type;
-};
-
-// ----------------------------------------------------------------------------
 // Metafunction Chunk
 // ----------------------------------------------------------------------------
 
@@ -438,7 +421,7 @@ shareResources(TValue const & obj1,
 // ----------------------------------------------------------------------------
 
 template <typename TValue, typename TSpec, typename TPos>
-inline typename Reference< String<TValue, TSpec> >::Type
+SEQAN_HOST_DEVICE inline typename Reference< String<TValue, TSpec> >::Type
 value(String<TValue, TSpec> & me,
       TPos const & pos)
 {
@@ -450,7 +433,7 @@ value(String<TValue, TSpec> & me,
 }
 
 template <typename TValue, typename TSpec, typename TPos>
-inline typename Reference< String<TValue, TSpec> const >::Type
+SEQAN_HOST_DEVICE inline typename Reference< String<TValue, TSpec> const >::Type
 value(String<TValue, TSpec> const & me,
       TPos const & pos)
 {
@@ -466,7 +449,7 @@ value(String<TValue, TSpec> const & me,
 // ----------------------------------------------------------------------------
 
 template <typename TValue, typename TSpec>
-inline typename Size< String<TValue, TSpec> const>::Type
+SEQAN_HOST_DEVICE inline typename Size< String<TValue, TSpec> const>::Type
 length(String<TValue, TSpec> const & me)
 {
     return end(me, Standard()) - begin(me, Standard());
@@ -477,7 +460,7 @@ length(String<TValue, TSpec> const & me)
 // ----------------------------------------------------------------------------
 
 template <typename TValue, typename TSpec>
-inline bool
+SEQAN_HOST_DEVICE inline bool
 empty(String<TValue, TSpec> const & me)
 {
     return end(me, Standard()) == begin(me, Standard());

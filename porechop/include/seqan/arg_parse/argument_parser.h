@@ -40,7 +40,6 @@
 #include <seqan/arg_parse/arg_parse_type_support.h>
 #include <seqan/arg_parse/arg_parse_argument.h>
 #include <seqan/arg_parse/arg_parse_option.h>
-#include <seqan/arg_parse/arg_parse_version_check.h>
 
 #include <seqan/arg_parse/tool_doc.h>
 
@@ -48,7 +47,6 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <future>
 
 namespace seqan {
 
@@ -63,8 +61,6 @@ class ArgParseOption;
 void addOption(ArgumentParser & me, ArgParseOption const & opt);
 void hideOption(ArgumentParser & me, std::string const & name, bool hide);
 void setValidValues(ArgumentParser & me, std::string const & name, std::string const & values);
-template <typename TValue>
-void setDefaultValue(ArgumentParser & me, std::string const & name, const TValue & value);
 
 // Required in addOption() and addArgument().
 inline void hideOption(ArgumentParser & me, std::string const & name, bool hide = true);
@@ -201,7 +197,6 @@ public:
     std::vector<std::string> _usageText;    // the usage lines as strings, to avoid
                                             // interference with the rest of the doc
 
-    std::future<bool> appVersionCheckFuture;
     // ----------------------------------------------------------------------------
     // Function init()
     // ----------------------------------------------------------------------------
@@ -226,18 +221,6 @@ public:
                                         "FORMAT"));
         hideOption(*this, "export-help", true);
         setValidValues(*this, "export-help", "html man txt");
-
-#ifndef SEQAN_DISABLE_VERSION_CHECK
-        addOption(*this, ArgParseOption("",
-                                        "version-check",
-                                        "Turn this option off to disable version update notifications of the application. ",
-                                        ArgParseArgument::BOOL));
-#ifdef SEQAN_VERSION_CHECK_OPT_IN
-        setDefaultValue(*this, "version-check", false);
-#else  // Make version update opt out.
-        setDefaultValue(*this, "version-check", true);
-#endif  // SEQAN_VERSION_CHECK_OPT_IN
-#endif  // !SEQAN_DISABLE_VERSION_CHECK
     }
 
     // ----------------------------------------------------------------------------
@@ -255,13 +238,6 @@ public:
         init();
     }
 
-    ~ArgumentParser()
-    {
-        // wait for another 3 seconds
-        if (appVersionCheckFuture.valid())
-            appVersionCheckFuture.wait_for(std::chrono::seconds(3));
-    }
-    
 };
 
 // ==========================================================================
@@ -682,22 +658,11 @@ inline bool getOptionValue(TValue & val,
     SEQAN_CHECK(hasOption(me, name), "Unknown option: %s", toCString(name));
 
     if (isSet(me, name) || hasDefault(me, name))
-    {
-        if (isFlagOption(getOption(me, name)))
-        {
-            return _convertFlagValue(val, getArgumentValue(getOption(me, name), argNo));
-        }
-        else
-        {
-            return _convertArgumentValue(val,
-                                         getOption(me, name),
-                                         getArgumentValue(getOption(me, name), argNo));
-        }
-    }
+        return _convertArgumentValue(val,
+                                     getOption(me, name),
+                                     getArgumentValue(getOption(me, name), argNo));
     else
-    {
         return false;
-    }
 }
 
 template <typename TValue>

@@ -169,8 +169,7 @@ namespace seqan
             typedef MaxRepeats_<void>        MaxRepeats;    // maximal repeat
             struct    MaxRepeatOccurrences;
             typedef MaxRepeats_<MultiMems_> MultiMems;    // Multiple Maximal Exact Match
-            struct    MultiMemOccurrences;                    // i.e. maximal match over different sequences
-	    typedef MultiMemOccurrences MultiMemOccurences;  // prevent breakage of the API for third party projects relying on the misspelled tag
+            struct    MultiMemOccurences;                    // i.e. maximal match over different sequences
 
 
 /*!
@@ -198,40 +197,40 @@ namespace seqan
     template <typename TSize>
     struct VertexEsa {
         Pair<TSize> range;            // current SA interval of hits (unique node identifier)
-        TSize        parentRight;    // right boundary of parent node's range (allows one to go right)
+        TSize        parentRight;    // right boundary of parent node's range (allows to go right)
 
-       
+        SEQAN_HOST_DEVICE
         VertexEsa() : range(0, 0), parentRight(0) {}
 
-       
+        SEQAN_HOST_DEVICE
         VertexEsa(MinimalCtor):
             range(0,0),
             parentRight(0) {}
 
-       
+        SEQAN_HOST_DEVICE
         VertexEsa(TSize otherRangeLeft, TSize otherRangeRight, TSize otherParentRight):
             range(Pair<TSize>(otherRangeLeft, otherRangeRight)),
             parentRight(otherParentRight) {}
 
-       
+        SEQAN_HOST_DEVICE
         VertexEsa(Pair<TSize> const &otherRange, TSize otherParentRight):
             range(otherRange),
             parentRight(otherParentRight) {}
 
-       
+        SEQAN_HOST_DEVICE
         VertexEsa(VertexEsa const &other):
             range(other.range),
             parentRight(other.parentRight) {}
     };
 
     template <typename TSize>
-    inline bool operator==(VertexEsa<TSize> const &a, VertexEsa<TSize> const &b)
+    SEQAN_HOST_DEVICE inline bool operator==(VertexEsa<TSize> const &a, VertexEsa<TSize> const &b)
     {
         return a.range == b.range;
     }
 
     template <typename TSize>
-    inline bool operator!=(VertexEsa<TSize> const &a, VertexEsa<TSize> const &b)
+    SEQAN_HOST_DEVICE inline bool operator!=(VertexEsa<TSize> const &a, VertexEsa<TSize> const &b)
     {
         return a.range != b.range;
     }
@@ -402,18 +401,6 @@ namespace seqan
         typename Fibre<Index, EsaBwt>::Type         bwt;        // burrows-wheeler table
         typename Cargo<Index>::Type                 cargo;        // user-defined cargo
 
-        /*!
-         * @fn IndexEsa::Index
-         * @brief Constructor
-         *
-         * @signature Index::Index();
-         * @signature Index::Index(index);
-         * @signature Index::Index(text);
-         *
-         * @param[in] index Other Index object to copy from.
-         * @param[in] text  The text to be indexed.
-         */
-
         Index() {}
 
         Index(Index &other):
@@ -448,7 +435,7 @@ namespace seqan
 //////////////////////////////////////////////////////////////////////////////
 
     template < typename TText, typename TSpec >
-    inline void _indexRequireTopDownIteration(Index<TText, IndexEsa<TSpec> > &index)
+    SEQAN_HOST_DEVICE inline void _indexRequireTopDownIteration(Index<TText, IndexEsa<TSpec> > &index)
     {
         indexRequire(index, EsaSA());
         indexRequire(index, EsaLcp());

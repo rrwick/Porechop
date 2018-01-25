@@ -146,16 +146,14 @@ _readOneAnnotation(
         if (ctx._key == "Parent" || ctx._key == "ParentID")
         {
             ctx.parentKey = ctx._key;
-            auto it = begin(ctx._value);
-            readUntil(ctx.parentName, it, EqualsChar<','>());
+            ctx.parentName = ctx._value;
         }
         else if (ctx._key == "transcript_id")
         {
             if (isEqual(format, Gtf()))
             {
                 ctx.parentKey = ctx._key;
-                auto it = begin(ctx._value);
-                readUntil(ctx.parentName, it, EqualsChar<','>());
+                ctx.parentName = ctx._value;
             }
             else
             {
