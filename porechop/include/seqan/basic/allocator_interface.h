@@ -82,9 +82,6 @@ typedef Tag<AllocateTemp_> TagAllocateTemp;
 struct AllocateStorage_;
 typedef Tag<AllocateStorage_> TagAllocateStorage;
 
-struct AllocateAlignedMalloc_;
-typedef Tag<AllocateAlignedMalloc_> TagAllocateAlignedMalloc;
-
 /*!
  * @class Allocator
  * @headerfile <seqan/basic.h>
@@ -190,17 +187,17 @@ allocate(T const &,
          Tag<TUsage> const &)
 {
 //  data = (TValue *) operator new(count * sizeof(TValue));
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS_VS
     data = (TValue *) _aligned_malloc(count * sizeof(TValue), __alignof(TValue));
 #else
 /*#if _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
-    const size_t align = (__alignof__(TValue) < sizeof(void*)) ? sizeof(void*): __alignof__(TValue);
+    const size_t align = (__alignof__(TValue) < sizeof(void*))? sizeof(void*): __alignof__(TValue);
     if (posix_memalign(&(void* &)data, align, count * sizeof(TValue)))
         data = NULL;
 #else
     data = (TValue *) malloc(count * sizeof(TValue));
 #endif*/
-  data = (TValue *) operator new(count * sizeof(TValue));
+    data = (TValue *) operator new(count * sizeof(TValue));
 #endif
 
 #ifdef SEQAN_PROFILE
@@ -217,65 +214,22 @@ allocate(T &,
          Tag<TUsage> const &)
 {
 //  data = (TValue *) operator new(count * sizeof(TValue));
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS_VS
     data = (TValue *) _aligned_malloc(count * sizeof(TValue), __alignof(TValue));
 #else
 /*#if _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
-    const size_t align = (__alignof__(TValue) < sizeof(void*)) ? sizeof(void*) : __alignof__(TValue);
+    const size_t align = (__alignof__(TValue) < sizeof(void*))? sizeof(void*): __alignof__(TValue);
     if (posix_memalign(&(void* &)data, align, count * sizeof(TValue)))
-      data = NULL;
+        data = NULL;
 #else
     data = (TValue *) malloc(count * sizeof(TValue));
-#endif*/
-  data = (TValue *) operator new(count * sizeof(TValue));
+#endif
+*/  data = (TValue *) operator new(count * sizeof(TValue));
 #endif
 
 #ifdef SEQAN_PROFILE
     if (data)
         SEQAN_PROADD(SEQAN_PROMEMORY, count * sizeof(TValue));
-#endif
-}
-
-// NOTE(rrahn): Currently *new* does not support aligned memory, but we need it for dynamically
-// allocated SimdVector class, so we overload the allocation to use mem_alloc for simd vector types.
-// See following discussion: http://stackoverflow.com/questions/6973995/dynamic-aligned-memory-allocation-in-c11
-template <typename T, typename TValue, typename TSize>
-inline void
-allocate(T const &,
-         TValue * & data,
-         TSize count,
-         TagAllocateAlignedMalloc const &)
-{
-#ifdef PLATFORM_WINDOWS_VS
-    data = (TValue *) _aligned_malloc(count * sizeof(TValue), __alignof(TValue));
-#else
-    #if _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
-        const size_t align = (__alignof__(TValue) < sizeof(void*)) ? sizeof(void*): __alignof__(TValue);
-        if (posix_memalign(&(void* &)data, align, count * sizeof(TValue)))
-            data = NULL;
-    #else
-        data = (TValue *) malloc(count * sizeof(TValue));
-    #endif
-#endif
-}
-
-template <typename T, typename TValue, typename TSize>
-inline void
-allocate(T &,
-         TValue * & data,
-         TSize count,
-         TagAllocateAlignedMalloc const &)
-{
-#ifdef PLATFORM_WINDOWS_VS
-    data = (TValue *) _aligned_malloc(count * sizeof(TValue), __alignof(TValue));
-#else
-    #if _POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
-        const size_t align = (__alignof__(TValue) < sizeof(void*)) ? sizeof(void*) : __alignof__(TValue);
-        if (posix_memalign(&(void* &)data, align, count * sizeof(TValue)))
-        data = NULL;
-    #else
-        data = (TValue *) malloc(count * sizeof(TValue));
-    #endif
 #endif
 }
 
@@ -344,7 +298,7 @@ deallocate(
         SEQAN_PROSUB(SEQAN_PROMEMORY, count * sizeof(TValue));
 #endif
 //  operator delete ((void *) data);
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS_VS
     _aligned_free((void *) data);
 #else
 //  free((void *) data);
@@ -369,61 +323,11 @@ deallocate(
         SEQAN_PROSUB(SEQAN_PROMEMORY, count * sizeof(TValue));
 #endif
 //  operator delete ((void *) data);
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS_VS
     _aligned_free((void *) data);
 #else
 //  free((void *) data);
     operator delete ((void *) data);
-#endif
-}
-
-// NOTE(rrahn): Currently *new* does not support aligned memory, but we need it for dynamically
-// allocated SimdVector class, so we overload the allocation to use mem_alloc for simd vector types.
-// See following discussion: http://stackoverflow.com/questions/6973995/dynamic-aligned-memory-allocation-in-c11
-template <typename T, typename TValue, typename TSize>
-inline void
-deallocate(
-           T const & /*me*/,
-           TValue * data,
-#ifdef SEQAN_PROFILE
-           TSize count,
-#else
-           TSize,
-#endif
-           TagAllocateAlignedMalloc const)
-{
-#ifdef SEQAN_PROFILE
-    if (data && count)  // .. to use count if SEQAN_PROFILE is not defined
-        SEQAN_PROSUB(SEQAN_PROMEMORY, count * sizeof(TValue));
-#endif
-#ifdef PLATFORM_WINDOWS_VS
-    _aligned_free((void *) data);
-#else
-    free((void *) data);
-#endif
-}
-
-template <typename T, typename TValue, typename TSize>
-inline void
-deallocate(
-           T & /*me*/,
-           TValue * data,
-#ifdef SEQAN_PROFILE
-           TSize count,
-#else
-           TSize,
-#endif
-           TagAllocateAlignedMalloc const)
-{
-#ifdef SEQAN_PROFILE
-    if (data && count)  // .. to use count if SEQAN_PROFILE is not defined
-        SEQAN_PROSUB(SEQAN_PROMEMORY, count * sizeof(TValue));
-#endif
-    //  operator delete ((void *) data);
-#ifdef PLATFORM_WINDOWS_VS
-    _aligned_free((void *) data);
-#else
-    free((void *) data);
 #endif
 }
 

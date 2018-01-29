@@ -83,13 +83,13 @@ TFloat _zscore(TStringSet W,  TStringSet& X, MarkovModel<TAlphabet, TFloat, TSpe
 }
 
 /*
- * @fn _numOccurrences
+ * @fn _numOccurences
  * @headerfile <seqan/statistics.h>
- * @brief Auxiliary function to compute the number of occurrences of a set of patterns in a set of text strings.
+ * @brief Auxiliary function to compute the number of occurences of a set of patterns in a set of text strings.
  *
- * @signature void _numOccurrences(W, haystack, needle, algoTag);
+ * @signature void _numOccurences(W, haystack, needle, algoTag);
  *
- * @param[in,out] W        A counter, incremented by the number of occurrences.
+ * @param[in,out] W        A counter, incremented by the number of occurences.
  * @param[in]     haystack The text strings.
  * @param[in]     needle   The set of patterns.
  * @param[in]     algoTag  The tag to select the online text search algorithm with.

@@ -37,7 +37,7 @@
 #ifndef SEQAN_HEADER_FILE_DIRECTORY_H
 #define SEQAN_HEADER_FILE_DIRECTORY_H
 
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS
 # include <io.h>
 #else
 # include <dirent.h>
@@ -63,7 +63,7 @@
 namespace seqan
 {
 
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS
 
     class Directory
     {

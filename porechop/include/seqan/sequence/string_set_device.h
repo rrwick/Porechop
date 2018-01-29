@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2013 NVIDIA Corporation
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -12,14 +12,14 @@
 //     * Redistributions in binary form must reproduce the above copyright
 //       notice, this list of conditions and the following disclaimer in the
 //       documentation and/or other materials provided with the distribution.
-//     * Neither the name of Knut Reinert or the FU Berlin nor the names of
+//     * Neither the name of NVIDIA Corporation nor the names of
 //       its contributors may be used to endorse or promote products derived
 //       from this software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 // IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL KNUT REINERT OR THE FU BERLIN BE LIABLE
+// ARE DISCLAIMED. IN NO EVENT SHALL NVIDIA CORPORATION BE LIABLE
 // FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 // DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 // SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
@@ -29,93 +29,48 @@
 // DAMAGE.
 //
 // ==========================================================================
-// Authors: Joerg Winkler <j.winkler@fu-berlin.de>
-//          Gianvito Urgese <gianvito.urgese@polito.it>
+// Author: Enrico Siragusa <enrico.siragusa@fu-berlin.de>
 // ==========================================================================
 
-#ifndef SEQAN_INCLUDE_SEQAN_RNA_IO_RNA_HEADER_H_
-#define SEQAN_INCLUDE_SEQAN_RNA_IO_RNA_HEADER_H_
+#ifndef SEQAN_STRING_SET_DEVICE_H
+#define SEQAN_STRING_SET_DEVICE_H
 
 namespace seqan {
-
-// ============================================================================
-// Tags, Classes, Enums
-// ============================================================================
-
-// ----------------------------------------------------------------------------
-// Class rnaHeader
-// ----------------------------------------------------------------------------
-
-/*!
- * @class RnaHeader
- * @headerfile <seqan/rna_io.h>
- * @brief A container for labels of several RNA structures.
- *
- * @signature class RnaHeader;
- *
- * The container stores all kinds of data that can be obtained by reading RNA structure file headers.
- */
-class RnaHeader
-{
-public:
-    /*!
-     * @var CharString RnaHeader::description
-     * @brief Free text for file description.
-     */
-    CharString description;
-
-    /*!
-     * @var StringSet<CharString> RnaHeader::seqLabels
-     * @brief List of sequence names.
-     */
-    StringSet<CharString> seqLabels;
-
-    /*!
-     * @var StringSet<CharString> RnaHeader::fixLabels
-     * @brief List of fixed structure computation methods.
-     */
-    StringSet<CharString> fixLabels;
-
-    /*!
-     * @var StringSet<CharString> RnaHeader::bppLabels
-     * @brief List of base pair probability matrix computation methods.
-     */
-    StringSet<CharString> bppLabels;
-
-    /*!
-     * @var StringSet<CharString> RnaHeader::typeLabels
-     * @brief List of types of biological validated data.
-     */
-    StringSet<CharString> typeLabels;
-
-    /*!
-     * @fn RnaHeader::RnaHeader
-     * @brief The constructor.
-     * @signature RnaHeader::RnaHeader()
-     */
-    RnaHeader() : description("") {}
-};
 
 // ============================================================================
 // Metafunctions
 // ============================================================================
 
-// ============================================================================
-// Functions
-// ============================================================================
 // ----------------------------------------------------------------------------
-// Function clear()
+// Metafunction Device                                              [StringSet]
 // ----------------------------------------------------------------------------
 
-inline void clear(RnaHeader & header)
+template <typename TString, typename TSpec>
+struct Device<StringSet<TString, TSpec> >
 {
-    clear(header.description);
-    clear(header.seqLabels);
-    clear(header.fixLabels);
-    clear(header.bppLabels);
-    clear(header.typeLabels);
-}
+    typedef StringSet<typename Device<TString>::Type, TSpec>    Type;
+};
+
+// ----------------------------------------------------------------------------
+// Metafunction IsDevice                                     [Device StringSet]
+// ----------------------------------------------------------------------------
+
+template <typename TValue, typename TAlloc, typename TSpec>
+struct IsDevice<StringSet<thrust::device_vector<TValue, TAlloc>, TSpec> > : public True {};
+
+// ----------------------------------------------------------------------------
+// Metafunction StringSetLimits                              [Device StringSet]
+// ----------------------------------------------------------------------------
+
+template <typename TValue, typename TAlloc, typename TSpec>
+struct StringSetLimits<StringSet<thrust::device_vector<TValue, TAlloc>, TSpec> >
+{
+    typedef thrust::device_vector<TValue, TAlloc>   TString_;
+    typedef typename Size<TString_>::Type           TSize_;
+    typedef thrust::device_vector<TSize_>           Type;
+};
+
 
 }  // namespace seqan
 
-#endif  // #ifndef SEQAN_INCLUDE_SEQAN_RNA_IO_RNA_HEADER_H_
+#endif  // #ifndef SEQAN_STRING_SET_DEVICE_H

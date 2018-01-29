@@ -74,7 +74,7 @@ The "number of hits"-line is always printed by NCBI Blast+, and never by NCBI Bl
 Possibly other lines can be written as comments.
 
 Because 0 matches are allowed, multiple COMMENTLINES can succeed each other, the
-criterium for separation employed by this implementation is that an NCBI Blast
+criterium for seperation employed by this implementation is that an NCBI Blast
 COMMENTLINES always ends after the "Fields" line and NCBI Blast+ COMMENTLINES end after
 the "number of hits"-line.
 */
@@ -118,7 +118,7 @@ namespace seqan
  * </ul>
  *
  * For a detailed example have a look at the
- * <a href="http://seqan.readthedocs.io/en/develop/Tutorial/InputOutput/BlastIO.html">Blast IO tutorial</a>.
+ * <a href="http://seqan.readthedocs.org/en/develop/Tutorial/BlastIO.html">Blast IO tutorial</a>.
  *
  * @see BlastRecord
  */
@@ -246,13 +246,13 @@ _goNextLine(BlastIOContext<TScore, p, h> & context,
 // Function _readCommentLines()
 // ----------------------------------------------------------------------------
 
-template <typename ... TSpecs,
+template <typename TMatch,
           typename TFwdIterator,
           typename TScore,
           BlastProgram p,
           BlastTabularSpec h>
 inline void
-_readCommentLinesImpl(BlastRecord<TSpecs...> & r,
+_readCommentLinesImpl(BlastRecord<TMatch> & r,
                       TFwdIterator & iter,
                       BlastIOContext<TScore, p, h> & context,
                       BlastTabular const &)
@@ -422,7 +422,7 @@ _readCommentLinesImpl(BlastRecord<TSpecs...> & r,
     }
     else
     {
-        // is omitted in BLAST_PLUS when there are no hits
+        // is ommitted in BLAST_PLUS when there are no hits
         if ((fieldsLinePresent != 1) && (length(r.matches) > 0))
             appendValue(context.conformancyErrors, "No or multiple fields lines present.");
     }
@@ -431,13 +431,13 @@ _readCommentLinesImpl(BlastRecord<TSpecs...> & r,
         appendValue(context.conformancyErrors, "Unexpected lines present, see context.otherLines.");
 }
 
-template <typename ... TSpecs,
+template <typename TMatch,
           typename TFwdIterator,
           typename TScore,
           BlastProgram p,
           BlastTabularSpec h>
 inline void
-_readCommentLines(BlastRecord<TSpecs...> & r,
+_readCommentLines(BlastRecord<TMatch> & r,
                   TFwdIterator & iter,
                   BlastIOContext<TScore, p, h> & context,
                   BlastTabular const &)
@@ -470,12 +470,10 @@ template <typename TAlignRow0,
           typename TQId,
           typename TSId,
           typename TScore,
-          typename ... TSpecs,
           BlastProgram p,
           BlastTabularSpec h>
 inline void
 _readField(BlastMatch<TAlignRow0, TAlignRow1, TPos, TQId, TSId> & match,
-           BlastRecord<TSpecs...> & record,
            BlastIOContext<TScore, p, h> & context,
            typename BlastMatchField<>::Enum const fieldId)
 {
@@ -487,13 +485,10 @@ _readField(BlastMatch<TAlignRow0, TAlignRow1, TPos, TQId, TSId> & match,
             match.qId = context._stringBuffer;
             break;
 //         case ENUM::Q_GI: write(s,  * ); break;
-        case BlastMatchField<>::Enum::Q_ACC:
-            appendValue(record.qAccs, context._stringBuffer);
-            break;
+//         case ENUM::Q_ACC: write(s,  * ); break;
 //         case ENUM::Q_ACCVER: write(s,  * ); break;
         case BlastMatchField<>::Enum::Q_LEN:
             match.qLength = lexicalCast<TPos>(context._stringBuffer);
-            record.qLength = match.qLength;
             break;
         case BlastMatchField<>::Enum::S_SEQ_ID:
             match.sId = context._stringBuffer;
@@ -501,13 +496,9 @@ _readField(BlastMatch<TAlignRow0, TAlignRow1, TPos, TQId, TSId> & match,
 //         case ENUM::S_ALL_SEQ_ID: write(s,  * ); break;
 //         case ENUM::S_GI: write(s,  * ); break;
 //         case ENUM::S_ALL_GI: write(s,  * ); break;
-        case BlastMatchField<>::Enum::S_ACC:
-            appendValue(match.sAccs, context._stringBuffer);
-            break;
+//         case ENUM::S_ACC: write(s,  * ); break;
 //         case ENUM::S_ACCVER: write(s,  * ); break;
-        case BlastMatchField<>::Enum::S_ALLACC:
-            strSplit(match.sAccs, context._stringBuffer, EqualsChar<';'>());
-            break;
+//         case ENUM::S_ALLACC: write(s,  * ); break;
         case BlastMatchField<>::Enum::S_LEN:
             match.sLength = lexicalCast<TPos>(context._stringBuffer);
             break;
@@ -557,7 +548,6 @@ _readField(BlastMatch<TAlignRow0, TAlignRow1, TPos, TQId, TSId> & match,
             break;
         case BlastMatchField<>::Enum::P_POS:
             match.alignStats.alignmentSimilarity = lexicalCast<double>(context._stringBuffer);
-            break;
         case BlastMatchField<>::Enum::FRAMES:
         {
             clear(context._setBuffer2);
@@ -574,13 +564,7 @@ _readField(BlastMatch<TAlignRow0, TAlignRow1, TPos, TQId, TSId> & match,
             match.sFrameShift = lexicalCast<int8_t>(context._stringBuffer);
             break;
 //         case ENUM::BTOP: write( * ); break;
-        case BlastMatchField<>::Enum::S_TAX_IDS:
-        {
-            StringSet<CharString> temp;
-            strSplit(temp, context._stringBuffer, EqualsChar<';'>());
-            for (auto const & s : temp)
-                appendValue(match.sTaxIds, lexicalCast<uint64_t>(s));
-        } break;
+//         case ENUM::S_TAX_IDS: write( * ); break;
 //         case ENUM::S_SCI_NAMES: write( * ); break;
 //         case ENUM::S_COM_NAMES: write( * ); break;
 //         case ENUM::S_BLAST_NAMES: write( * ); break;
@@ -590,12 +574,6 @@ _readField(BlastMatch<TAlignRow0, TAlignRow1, TPos, TQId, TSId> & match,
 //         case ENUM::S_STRAND: write( * ); break;
 //         case ENUM::Q_COV_S: write( * ); break;
 //         case ENUM::Q_COV_HSP:
-        case BlastMatchField<>::Enum::LCA_ID:
-            record.lcaId = context._stringBuffer;
-            break;
-        case BlastMatchField<>::Enum::LCA_TAX_ID:
-            record.lcaTaxId = lexicalCast<uint32_t>(context._stringBuffer);
-            break;
         default:
             SEQAN_THROW(ParseError("The requested column type is not yet "
                                    "implemented."));
@@ -613,12 +591,10 @@ template <typename TAlignRow0,
           typename TSId,
           typename TFwdIterator,
           typename TScore,
-          typename ... TSpecs,
           BlastProgram p,
           BlastTabularSpec h>
 inline void
 _readMatch(BlastMatch<TAlignRow0, TAlignRow1, TPos, TQId, TSId> & match,
-           BlastRecord<TSpecs...> & record,
            TFwdIterator & iter,
            BlastIOContext<TScore, p, h> & context,
            BlastTabular const &)
@@ -660,7 +636,7 @@ _readMatch(BlastMatch<TAlignRow0, TAlignRow1, TPos, TQId, TSId> & match,
                     SEQAN_THROW(ParseError("More columns expected than were present in file."));
 
                 context._stringBuffer = static_cast<decltype(context._stringBuffer)>(fields[n++]);
-                _readField(match, record, context, f2);
+                _readField(match, context, f2);
             }
         } else
         {
@@ -668,7 +644,7 @@ _readMatch(BlastMatch<TAlignRow0, TAlignRow1, TPos, TQId, TSId> & match,
                 SEQAN_THROW(ParseError("More columns expected than were present in file."));
 
             context._stringBuffer = static_cast<decltype(context._stringBuffer)>(fields[n++]);
-            _readField(match, record, context, f);
+            _readField(match, context, f);
         }
     }
 
@@ -703,12 +679,12 @@ _readMatch(BlastMatch<TAlignRow0, TAlignRow1, TPos, TQId, TSId> & match,
 // ----------------------------------------------------------------------------
 
 template <typename TFwdIterator,
-          typename ... TSpecs,
+          typename TMatch,
           typename TScore,
           BlastProgram p,
           BlastTabularSpec h>
 inline void
-_readRecordWithCommentLines(BlastRecord<TSpecs...> & blastRecord,
+_readRecordWithCommentLines(BlastRecord<TMatch> & blastRecord,
                             TFwdIterator & iter,
                             BlastIOContext<TScore, p, h> & context,
                             BlastTabular const &)
@@ -727,7 +703,7 @@ _readRecordWithCommentLines(BlastRecord<TSpecs...> & blastRecord,
                 break;
             }
 
-            _readMatch(m, blastRecord, iter, context, BlastTabular());
+            _readMatch(m, iter, context, BlastTabular());
         }
 
         if ((!atEnd(context, iter, BlastTabular())) && _onMatch(context, BlastTabular()))
@@ -737,25 +713,25 @@ _readRecordWithCommentLines(BlastRecord<TSpecs...> & blastRecord,
         while ((!atEnd(context, iter, BlastTabular())) && _onMatch(context, BlastTabular()))
         {
             blastRecord.matches.emplace_back();
-            _readMatch(back(blastRecord.matches), blastRecord, iter, context, BlastTabular());
+            _readMatch(back(blastRecord.matches), iter, context, BlastTabular());
         }
     } else
     {
         while ((!atEnd(context, iter, BlastTabular())) && _onMatch(context, BlastTabular()))
         {
             blastRecord.matches.emplace_back();
-            _readMatch(back(blastRecord.matches), blastRecord, iter, context, BlastTabular());
+            _readMatch(back(blastRecord.matches), iter, context, BlastTabular());
         }
     }
 }
 
-template <typename ... TSpecs,
+template <typename TMatch,
           typename TFwdIterator,
           typename TScore,
           BlastProgram p,
           BlastTabularSpec h>
 inline void
-_readRecordWithoutCommentLines(BlastRecord<TSpecs...> & blastRecord,
+_readRecordWithoutCommentLines(BlastRecord<TMatch> & blastRecord,
                                TFwdIterator & iter,
                                BlastIOContext<TScore, p, h> & context,
                                BlastTabular const &)
@@ -782,7 +758,7 @@ _readRecordWithoutCommentLines(BlastRecord<TSpecs...> & blastRecord,
     {
         blastRecord.matches.emplace_back();
         // read remainder of line
-        _readMatch(back(blastRecord.matches), blastRecord, iter, context, BlastTabular());
+        _readMatch(back(blastRecord.matches), iter, context, BlastTabular());
 
         if (!startsWith(context._lineBuffer, curIdPlusTab)) // next record reached
             break;
@@ -872,13 +848,13 @@ _readRecordWithoutCommentLines(BlastRecord<TSpecs...> & blastRecord,
  * @throw ParseError On high-level file format errors.
  */
 
-template <typename ... TSpecs,
+template <typename TMatch,
           typename TFwdIterator,
           typename TScore,
           BlastProgram p,
           BlastTabularSpec h>
 inline void
-readRecord(BlastRecord<TSpecs...> & blastRecord,
+readRecord(BlastRecord<TMatch> & blastRecord,
            TFwdIterator & iter,
            BlastIOContext<TScore, p, h> & context,
            BlastTabular const &)
@@ -889,10 +865,10 @@ readRecord(BlastRecord<TSpecs...> & blastRecord,
         _readRecordWithCommentLines(blastRecord, iter, context, BlastTabular());
 }
 
-template <typename ... TSpecs,
+template <typename TMatch,
           typename TContext>
 inline void
-readRecord(BlastRecord<TSpecs...> & blastRecord,
+readRecord(BlastRecord<TMatch> & blastRecord,
            BlastTabularFileIn<TContext> & formattedFile)
 {
     readRecord(blastRecord, formattedFile.iter, context(formattedFile), BlastTabular());

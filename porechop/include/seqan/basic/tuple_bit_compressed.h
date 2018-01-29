@@ -87,14 +87,16 @@ template <> struct BitVector_<255>;
 // TODO(holtgrew): There is a lot of stuff defined within the class itself. A lot of it could be moved into global functions.
 
 // bit-packed storage (space efficient)
-#pragma pack(push,1)
+#ifdef PLATFORM_WINDOWS
+    #pragma pack(push,1)
+#endif
 template <typename TValue, unsigned SIZE>
 struct Tuple<TValue, SIZE, BitPacked<> >
 {
     typedef typename BitVector_<SIZE * BitsPerValue<TValue>::VALUE>::Type TBitVector;
 
-    static constexpr uint64_t BIT_MASK = ((1ull << (BitsPerValue<TValue>::VALUE - 1)       ) - 1ull) << 1 | 1ull;
-    static constexpr uint64_t MASK     = ((1ull << (SIZE * BitsPerValue<TValue>::VALUE - 1)) - 1ull) << 1 | 1ull;
+    static const uint64_t BIT_MASK = ((1ull << (BitsPerValue<TValue>::VALUE - 1)       ) - 1ull) << 1 | 1ull;
+    static const uint64_t MASK     = ((1ull << (SIZE * BitsPerValue<TValue>::VALUE - 1)) - 1ull) << 1 | 1ull;
 
     // -----------------------------------------------------------------------
     // Members
@@ -108,7 +110,7 @@ struct Tuple<TValue, SIZE, BitPacked<> >
 
     // TODO(holtgrew): There is the unresolved issue whether the initialize costs critical performance. Since Tuples are PODs, it should be able to initialize Strings/arrays of them with memset().
     // TODO(weese): Use static a assertion outside of the constructor here, see SEQAN_CONCEPT_ASSERT
-//    Tuple() : i(0)
+//    SEQAN_HOST_DEVICE Tuple() : i(0)
 //    {
 //        SEQAN_ASSERT_LEQ(static_cast<uint64_t>(BitsPerValue<TValue>::VALUE * SIZE), static_cast<uint64_t>(sizeof(TBitVector) * 8));
 //    }
@@ -118,7 +120,7 @@ struct Tuple<TValue, SIZE, BitPacked<> >
     // -----------------------------------------------------------------------
 
     template <typename TPos>
-    inline const TValue
+    SEQAN_HOST_DEVICE inline const TValue
     operator[](TPos k) const
     {
         SEQAN_ASSERT_GEQ(static_cast<int64_t>(k), 0);
@@ -192,8 +194,14 @@ struct Tuple<TValue, SIZE, BitPacked<> >
         i = (i & ~(BIT_MASK << shift)) | (TBitVector)ordValue(source) << shift;
         return source;
     }
-};
-#pragma pack(pop)
+}
+#ifndef PLATFORM_WINDOWS
+    __attribute__((packed))
+#endif
+    ;
+#ifdef PLATFORM_WINDOWS
+    #pragma pack(pop)
+#endif
 
 // ============================================================================
 // Metafunctions

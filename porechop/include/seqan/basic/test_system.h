@@ -44,18 +44,18 @@
 #ifndef INCLUDE_SEQAN_BASIC_TEST_SYSTEM_H_
 #define INCLUDE_SEQAN_BASIC_TEST_SYSTEM_H_
 
-#ifdef STDLIB_VS
+#ifdef PLATFORM_WINDOWS
 #include <typeinfo>
-#endif  // #ifdef STDLIB_VS
+#endif  // #ifdef PLATFORM_WINDOWS
 
 #include <seqan/basic/fundamental_tags.h>
 
 #include <memory>
 #include <string>
 
-#if !defined(STDLIB_VS)
+#ifdef PLATFORM_GCC
 #include <cxxabi.h>
-#endif  // #if !defined(STDLIB_VS)
+#endif  // #ifdef PLATFORM_GCC
 
 namespace seqan {
 
@@ -173,11 +173,6 @@ public:
             }
             seqan::ClassTest::endTest();
         }
-
-        // explicitly delete heap allocated resources
-        for (auto test: instance.testDescriptions)
-            delete test;
-
         return seqan::ClassTest::endTestSuite();
     }
 };
@@ -230,15 +225,15 @@ public:
     static std::string getTypeName()
     {
         const char* const name = typeid(T).name();
-#if !defined(STDLIB_VS)
+#ifdef PLATFORM_GCC
         int status = 0;
         char* const readableName = abi::__cxa_demangle(name, 0, 0, &status);
         std::string nameString(status == 0 ? readableName : name);
         free(readableName);
         return nameString;
-#else  // #if !defined(STDLIB_VS)
+#else  // #ifdef PLATFORM_GCC
         return name;
-#endif  // #if !defined(STDLIB_VS)
+#endif  // #ifdef PLATFORM_GCC
     }
 
     static bool make(char const * testCaseName, char const * testName)

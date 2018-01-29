@@ -609,11 +609,10 @@ _checkThatStreamOutputFormatIsSet(FormattedFile<TFileFormat, Output, TSpec> cons
  * @fn FormattedFile#open
  * @brief Open a FormattedFile.
  *
- * @signature bool open(file, fileName, mode);
+ * @signature bool open(file, fileName);
  *
  * @param[in,out] file The FormattedFile to open.
  * @param[in]     fileName The name of the file open.
- * @param[in]     mode The open mode: @link FileOpenMode @endlink.
  * @return bool <tt>true</tt> in the case of success, <tt>false</tt> otherwise.
  */
 
@@ -713,26 +712,6 @@ inline bool open(FormattedFile<TFileFormat, TDirection, TSpec> & file,
                  int openMode = DefaultOpenMode<FormattedFile<TFileFormat, TDirection, TSpec> >::VALUE)
 {
     return _open(file, fileName, openMode, False());
-}
-
-// ----------------------------------------------------------------------------
-// Function isOpen()
-// ----------------------------------------------------------------------------
-
-/*!
- * @fn FormattedFile#isOpen
- * @brief Determines whether a FormattedFile is currently open.
- *
- * @signature bool isOpen(file);
- *
- * @param[in]     file The FormattedFile to check.
- * @return bool <tt>true</tt> if file is currently open, <tt>false</tt> otherwise.
- */
-
-template <typename TFileFormat, typename TDirection, typename TSpec>
-inline bool isOpen(FormattedFile<TFileFormat, TDirection, TSpec> const & file)
-{
-    return file.stream.file.is_open();
 }
 
 // ----------------------------------------------------------------------------

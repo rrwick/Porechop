@@ -71,7 +71,9 @@ namespace seqan {
  * <tt>getValue()</tt>, <tt>assignValue()</tt>, <tt>moveValue()</tt>, <tt>setValue()</tt> instead.
  */
 
-#pragma pack(push,1)
+#ifdef PLATFORM_WINDOWS
+    #pragma pack(push,1)
+#endif
 template <typename T1, typename T2, unsigned BITSIZE1, unsigned BITSIZE2>
 struct Pair<T1, T2, BitPacked<BITSIZE1, BITSIZE2> >
 {
@@ -96,8 +98,14 @@ struct Pair<T1, T2, BitPacked<BITSIZE1, BITSIZE2> >
     // TODO(holtgrew): explicit?
     inline Pair(Pair<T1_, T2_, TSpec__> const &_p)
             : i1(getValueI1(_p)), i2(getValueI2(_p)) {}
-};
-#pragma pack(pop)
+}
+#ifndef PLATFORM_WINDOWS
+    __attribute__((packed))
+#endif
+    ;
+#ifdef PLATFORM_WINDOWS
+      #pragma pack(pop)
+#endif
 
 // ============================================================================
 // Metafunctions

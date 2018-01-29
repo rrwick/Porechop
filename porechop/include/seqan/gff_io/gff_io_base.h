@@ -410,9 +410,6 @@ void readRecord(GffRecord & record, CharString & buffer, TFwdIterator & iter)
         return;
     }
     skipOne(iter, IsTab());
-    // There is often a space character between phase and attribute columns.
-    // We can safely skip that!
-    skipUntil(iter, NotFunctor<IsSpace>());  //skip empty lines
 
     // read column 9: attributes
     while (!atEnd(iter))

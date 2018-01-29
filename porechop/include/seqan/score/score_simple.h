@@ -276,6 +276,7 @@ setScoreGap(Score<TValue, TSpec> & me, TValue const & value) {
     me.data_gap_extend = value;
 }
 
+
 // TODO(rmaerker): Remove this here!
 //template <typename TValue, typename TSpec, typename TVal1, typename TVal2>
 //inline TValue

@@ -187,14 +187,14 @@ struct Needle<Segment<THost, TSpec> const>
  * @param[in]     k       Desired minimal score (for approximate matching).  <tt>k</tt> is a number <tt>&lt;= 0</tt>.
  *                        Differences are deletions, insertions, and substitutions.
  *
- * @return bool <tt>true</tt> if an occurrence was found and <tt>false</tt> if not.
+ * @return bool <tt>true</tt> if an occurence was found and <tt>false</tt> if not.
  *
- * Repeated calls of this function iterate through all occurrences of <tt>pattern</tt>.
+ * Repeated calls of this function iterate through all occurences of <tt>pattern</tt>.
  *
  * @section Examples
  *
  * The following example shows how one can search online for a pattern in a haystack.  Note that it is neccessary to
- * reset the finder before searching for another pattern.
+ * reset the finder befor searching for another pattern.
  *
  * @include demos/dox/find/finder_online.cpp
  *
@@ -203,7 +203,7 @@ struct Needle<Segment<THost, TSpec> const>
  * @include demos/dox/find/finder_online.cpp.stdout
  *
  * In contrast to the example above the code below shows how one can use a Finder with an index as base.  Again, note
- * that it is neccessary to reset the finder before searching for another pattern.
+ * that it is neccessary to reset the finder befor searching for another pattern.
  *
  * @include demos/dox/find/finder_index.cpp
  *
@@ -563,14 +563,14 @@ length(Finder<THaystack, TSpec> const & me)
  */
 
 template <typename THaystack, typename TSpec>
-inline typename InfixOnValue<THaystack>::Type
+inline typename Infix<THaystack>::Type
 infix(Finder<THaystack, TSpec> & me)
 {
     return infix(haystack(me), beginPosition(me), endPosition(me));
 }
 
 template <typename THaystack, typename TSpec>
-inline typename InfixOnValue<THaystack const>::Type
+inline typename Infix<THaystack const>::Type
 infix(Finder<THaystack, TSpec> const & me)
 {
     return infix(haystack(me), beginPosition(me), endPosition(me));

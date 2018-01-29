@@ -61,7 +61,7 @@ template <typename TPosition, typename TSize>
 class TraceSegment_
 {
 public:
-    typedef typename TraceBitMap_<>::Type TTraceValue;
+    typedef typename TraceBitMap_::TTraceValue TTraceValue;
 
     TPosition _horizontalBeginPos;      // the begin position in horizontal dimension
     TPosition _verticalBeginPos;        // the begin position in vertical dimension
@@ -69,7 +69,7 @@ public:
     TTraceValue _traceValue;            // the trace direction
 
     TraceSegment_() :
-        _horizontalBeginPos(0), _verticalBeginPos(0), _length(0), _traceValue(+TraceBitMap_<TTraceValue>::NONE){}
+        _horizontalBeginPos(0), _verticalBeginPos(0), _length(0), _traceValue(+TraceBitMap_::NONE){}
 
     TraceSegment_(TraceSegment_ const & other) :
         _horizontalBeginPos(other._horizontalBeginPos),
@@ -169,8 +169,7 @@ template <typename TPosition, typename TSize>
 inline TPosition
 _getEndHorizontal(TraceSegment_<TPosition, TSize> const & traceSegment)
 {
-    typedef typename std::remove_const<decltype(traceSegment._traceValue)>::type TTraceValue;
-    if (traceSegment._traceValue & (TraceBitMap_<TTraceValue>::HORIZONTAL | TraceBitMap_<TTraceValue>::DIAGONAL))
+    if (traceSegment._traceValue & (TraceBitMap_::HORIZONTAL | TraceBitMap_::DIAGONAL))
     {
         return traceSegment._horizontalBeginPos + traceSegment._length;
     }
@@ -186,8 +185,7 @@ template <typename TPosition, typename TSize>
 inline TPosition
 _getEndVertical(TraceSegment_<TPosition, TSize> const & traceSegment)
 {
-    typedef typename std::remove_const<decltype(traceSegment._traceValue)>::type TTraceValue;
-    if (traceSegment._traceValue & (TraceBitMap_<TTraceValue>::VERTICAL | TraceBitMap_<TTraceValue>::DIAGONAL))
+    if (traceSegment._traceValue & (TraceBitMap_::VERTICAL | TraceBitMap_::DIAGONAL))
     {
         return traceSegment._verticalBeginPos + traceSegment._length;
     }
@@ -230,6 +228,8 @@ _setLength(TraceSegment_<TPosition, TSize> & traceSegment, TSize newLength)
     traceSegment._length = newLength;
 }
 
+
+
 // ----------------------------------------------------------------------------
 // Function _translateTraceValue()
 // ----------------------------------------------------------------------------
@@ -242,22 +242,22 @@ String<char> _translateTraceValue(TTraceValue const & traceValue)
 {
     String<char> transcript;
 
-    if ((traceValue & TraceBitMap_<TTraceValue>::DIAGONAL) == TraceBitMap_<TTraceValue>::DIAGONAL)
+    if ((traceValue & TraceBitMap_::DIAGONAL) == TraceBitMap_::DIAGONAL)
         append(transcript, 'D');
-    if ((traceValue & TraceBitMap_<TTraceValue>::VERTICAL) == TraceBitMap_<TTraceValue>::VERTICAL)
+    if ((traceValue & TraceBitMap_::VERTICAL) == TraceBitMap_::VERTICAL)
         append(transcript, 'V');
-    if ((traceValue & TraceBitMap_<TTraceValue>::HORIZONTAL) == TraceBitMap_<TTraceValue>::HORIZONTAL)
+    if ((traceValue & TraceBitMap_::HORIZONTAL) == TraceBitMap_::HORIZONTAL)
         append(transcript, 'H');
-    if ((traceValue & TraceBitMap_<TTraceValue>::VERTICAL_OPEN) == TraceBitMap_<TTraceValue>::VERTICAL_OPEN)
+    if ((traceValue & TraceBitMap_::VERTICAL_OPEN) == TraceBitMap_::VERTICAL_OPEN)
         append(transcript, 'v');
-    if ((traceValue & TraceBitMap_<TTraceValue>::HORIZONTAL_OPEN) == TraceBitMap_<TTraceValue>::HORIZONTAL_OPEN)
+    if ((traceValue & TraceBitMap_::HORIZONTAL_OPEN) == TraceBitMap_::HORIZONTAL_OPEN)
         append(transcript, 'h');
-    if ((traceValue & TraceBitMap_<TTraceValue>::MAX_FROM_VERTICAL_MATRIX) == TraceBitMap_<TTraceValue>::MAX_FROM_VERTICAL_MATRIX)
+    if ((traceValue & TraceBitMap_::MAX_FROM_VERTICAL_MATRIX) == TraceBitMap_::MAX_FROM_VERTICAL_MATRIX)
         append(transcript, '|');
-    if ((traceValue & TraceBitMap_<TTraceValue>::MAX_FROM_HORIZONTAL_MATRIX) == TraceBitMap_<TTraceValue>::MAX_FROM_HORIZONTAL_MATRIX)
+    if ((traceValue & TraceBitMap_::MAX_FROM_HORIZONTAL_MATRIX) == TraceBitMap_::MAX_FROM_HORIZONTAL_MATRIX)
         append(transcript, '-');
 
-    if ((traceValue) == TraceBitMap_<TTraceValue>::NONE)
+    if ((traceValue) == TraceBitMap_::NONE)
         append(transcript, '0');
     return transcript;
 }
@@ -327,12 +327,12 @@ inline void _recordSegment(TTraceSegments & traceSegments,
     if (segmentLength == 0)
         return;  // we don't store empty segments
 
-    if (traceValue & TraceBitMap_<TTraceValue>::DIAGONAL)
-        appendValue(traceSegments, TTraceSegment(horizontalBeginPos, verticalBeginPos, segmentLength, +TraceBitMap_<TTraceValue>::DIAGONAL));
-    else if (traceValue & TraceBitMap_<TTraceValue>::VERTICAL)
-        appendValue(traceSegments, TTraceSegment(horizontalBeginPos, verticalBeginPos, segmentLength, +TraceBitMap_<TTraceValue>::VERTICAL));
-    else if (traceValue & TraceBitMap_<TTraceValue>::HORIZONTAL)
-        appendValue(traceSegments, TTraceSegment(horizontalBeginPos, verticalBeginPos, segmentLength, +TraceBitMap_<TTraceValue>::HORIZONTAL));
+    if (traceValue & TraceBitMap_::DIAGONAL)
+        appendValue(traceSegments, TTraceSegment(horizontalBeginPos, verticalBeginPos, segmentLength, +TraceBitMap_::DIAGONAL));
+    else if (traceValue & TraceBitMap_::VERTICAL)
+        appendValue(traceSegments, TTraceSegment(horizontalBeginPos, verticalBeginPos, segmentLength, +TraceBitMap_::VERTICAL));
+    else if (traceValue & TraceBitMap_::HORIZONTAL)
+        appendValue(traceSegments, TTraceSegment(horizontalBeginPos, verticalBeginPos, segmentLength, +TraceBitMap_::HORIZONTAL));
     // everything else is not tracked.
 }
 

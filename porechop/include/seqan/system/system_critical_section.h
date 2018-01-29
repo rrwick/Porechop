@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -29,53 +29,81 @@
 // DAMAGE.
 //
 // ==========================================================================
-// Author: Christopher Pockrandt <christopher.pockrandt@fu-berlin.de>
+// Author: David Weese <david.weese@fu-berlin.de>
+// ==========================================================================
+// Critical Section class. In conjunction with a condition object it allows
+// to suspend a thread until another wakes it up.
 // ==========================================================================
 
-//SEQAN_NO_DDDOC:do not generate documentation for this file
-
-#ifndef INDEX_BIFM_H_
-#define INDEX_BIFM_H_
+#ifndef SEQAN_HEADER_SYSTEM_CRITICAL_SECTION_H_
+#define SEQAN_HEADER_SYSTEM_CRITICAL_SECTION_H_
 
 namespace seqan {
 
-template <typename TText, typename TSpec, typename TConfig>
-SEQAN_CONCEPT_IMPL((Index<TText, BidirectionalIndex<FMIndex<TSpec, TConfig> > >), (StringTrieConcept));
+#ifdef PLATFORM_WINDOWS
 
-template <typename TText, typename TSpec, typename TConfig>
-SEQAN_CONCEPT_IMPL((Index<TText, BidirectionalIndex<FMIndex<TSpec, TConfig> > > const), (StringTrieConcept));
-
-// ============================================================================
-// Functions
-// ============================================================================
-
-// ----------------------------------------------------------------------------
-// Function indexCreate()
-// ----------------------------------------------------------------------------
-
-template <typename TText, typename TSpec, typename TConfig>
-inline bool indexCreate(Index<TText, BidirectionalIndex<FMIndex<TSpec, TConfig> > > & index)
+struct CriticalSection
 {
-    indexText(index.rev) = indexText(index.fwd);
-    reverse(indexText(index.rev));
-    return indexCreate(index.fwd, FibreSALF()) && indexCreate(index.rev, FibreSALF());
-}
+    CRITICAL_SECTION data_cs;
 
-// ----------------------------------------------------------------------------
-// Function indexSupplied()
-// ----------------------------------------------------------------------------
+    CriticalSection()
+    {
+        InitializeCriticalSection(&data_cs);
+    }
 
-template <typename TText, typename TIndexSpec>
-inline bool indexSupplied(Index<TText, BidirectionalIndex<TIndexSpec> > & index, FibreSALF const)
+    ~CriticalSection()
+    {
+        DeleteCriticalSection(&data_cs);
+    }
+};
+
+#else
+
+struct CriticalSection
 {
-    return indexSupplied(index.fwd, FibreSALF()) && indexSupplied(index.rev, FibreSALF());
-}
+    pthread_mutex_t data_cs;
 
-template <typename TText, typename TIndexSpec>
-inline bool indexSupplied(Index<TText, BidirectionalIndex<TIndexSpec> > const & index, FibreSALF const)
+    CriticalSection()
+    {
+        int result = pthread_mutex_init(&data_cs, NULL);
+        ignoreUnusedVariableWarning(result);
+        SEQAN_ASSERT_EQ(result, 0);
+    }
+
+    ~CriticalSection()
+    {
+        int result = pthread_mutex_destroy(&data_cs);
+        ignoreUnusedVariableWarning(result);
+        SEQAN_ASSERT_EQ(result, 0);
+    }
+};
+
+#endif
+
+inline void
+lock(CriticalSection &cs)
 {
-    return indexSupplied(index.fwd, FibreSALF()) && indexSupplied(index.rev, FibreSALF());
+#ifdef PLATFORM_WINDOWS
+    EnterCriticalSection(&cs.data_cs);
+#else
+    int result = pthread_mutex_lock(&cs.data_cs);
+    ignoreUnusedVariableWarning(result);
+    SEQAN_ASSERT_EQ(result, 0);
+#endif
+}
+
+inline void
+unlock(CriticalSection &cs)
+{
+#ifdef PLATFORM_WINDOWS
+    LeaveCriticalSection(&cs.data_cs);
+#else
+    int result = pthread_mutex_unlock(&cs.data_cs);
+    ignoreUnusedVariableWarning(result);
+    SEQAN_ASSERT_EQ(result, 0);
+#endif
 }
 
 }
-#endif /* INDEX_BIFM_H_ */
+
+#endif  // SEQAN_HEADER_SYSTEM_CRITICAL_SECTION_H_

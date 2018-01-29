@@ -54,40 +54,22 @@ namespace seqan {
  *
  * @tag RankDictionaryFibres#FibreRanks
  * @brief The string set containing a bit string for each character.
- *
- * @tag RankDictionaryFibres#FibreSuperBlocks
- * @brief The string set containing a bit string for each character.
- *
- * @tag RankDictionaryFibres#FibreUltraBlocks
- * @brief The string set containing a bit string for each character.
  */
 
 struct FibreRanks_;
-typedef Tag<FibreRanks_> const FibreRanks;
 
-struct FibreSuperBlocks_;
-typedef Tag<FibreSuperBlocks_> const FibreSuperBlocks;
-
-struct FibreUltraBlocks_;
-typedef Tag<FibreUltraBlocks_> const FibreUltraBlocks;
+typedef Tag<FibreRanks_>
+const FibreRanks;
 
 // ----------------------------------------------------------------------------
 // Tag RDConfig
 // ----------------------------------------------------------------------------
 
-template <
-    typename TSize = size_t,
-    typename TFibre = Alloc<>,
-    unsigned LEVELS_ = 1,
-    unsigned WORDS_PER_BLOCK_ = 1
->
+template <typename TSize = size_t, typename TFibre = Alloc<> >
 struct RDConfig
 {
-    typedef TSize   Size;
     typedef TFibre  Fibre;
-
-    static const unsigned WORDS_PER_BLOCK = WORDS_PER_BLOCK_;
-    static const unsigned LEVELS          = LEVELS_;
+    typedef TSize   Size;
 };
 
 // ============================================================================
@@ -102,12 +84,12 @@ struct RDConfig
  * @class RankDictionary
  * @headerfile <seqan/index.h>
  * @brief A rank dictionary is a data structure storing the rank of an element in a sequence at every position of
- *        the sequence. Only supports sequences containing @link SimpleType @endlink or bool.
+ *        the sequence.
  *
  * @signature template <typename TValue, typename TSpec>
  *            struct RankDictionary;
  *
- * @tparam TSpec The rank dictionary specialisation. Default: @link WaveletTree @endlink, @link Levels @endlink.
+ * @tparam TSpec The rank dictionary specialisation. Default: @link WaveletTree @endlink, @link TwoLevelRankDictionary @endlink.
  */
 template <typename TValue, typename TSpec>
 struct RankDictionary;
@@ -173,14 +155,14 @@ struct Value<RankDictionary<TValue, TSpec> const> :
 
 
 template <typename TValue, typename TSpec>
-inline typename Fibre<RankDictionary<TValue, TSpec>, FibreRanks>::Type &
+SEQAN_HOST_DEVICE inline typename Fibre<RankDictionary<TValue, TSpec>, FibreRanks>::Type &
 getFibre(RankDictionary<TValue, TSpec> & dict, FibreRanks)
 {
     return dict.ranks;
 }
 
 template <typename TValue, typename TSpec>
-inline typename Fibre<RankDictionary<TValue, TSpec>, FibreRanks>::Type const &
+SEQAN_HOST_DEVICE inline typename Fibre<RankDictionary<TValue, TSpec>, FibreRanks>::Type const &
 getFibre(RankDictionary<TValue, TSpec> const & dict, FibreRanks)
 {
     return dict.ranks;
@@ -223,7 +205,7 @@ inline void clear(RankDictionary<TValue, TSpec> & dict)
  */
 
 template <typename TValue, typename TSpec>
-inline bool empty(RankDictionary<TValue, TSpec> const & dict)
+SEQAN_HOST_DEVICE inline bool empty(RankDictionary<TValue, TSpec> const & dict)
 {
     return empty(getFibre(dict, FibreRanks()));
 }

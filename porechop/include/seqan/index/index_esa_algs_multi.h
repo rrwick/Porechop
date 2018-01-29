@@ -486,7 +486,7 @@ namespace seqan
 
 
     template <typename TSTree>
-    class Iter< MultiMem<TSTree>, MultiMemOccurrences > {
+    class Iter< MultiMem<TSTree>, MultiMemOccurences > {
     public:
 
         typedef typename Value<TSTree>::Type    TValue;
@@ -687,21 +687,21 @@ namespace seqan
 
 
     template < typename TRepeat >
-    inline typename Value< Iter<TRepeat, MultiMemOccurrences> >::Type &
-    value(Iter<TRepeat, MultiMemOccurrences> const &it)  {
+    inline typename Value< Iter<TRepeat, MultiMemOccurences> >::Type &
+    value(Iter<TRepeat, MultiMemOccurences> const &it)  {
         return it.tmp;
     }
 
     template < typename TRepeat >
-    inline typename Value< Iter<TRepeat, MultiMemOccurrences> >::Type &
-    value(Iter<TRepeat, MultiMemOccurrences> &it)  {
+    inline typename Value< Iter<TRepeat, MultiMemOccurences> >::Type &
+    value(Iter<TRepeat, MultiMemOccurences> &it)  {
         return it.tmp;
     }
 
 //TODO:fix me
     template < typename TRepeat >
-    inline Iter<TRepeat, MultiMemOccurrences> &
-    goNext(Iter<TRepeat, MultiMemOccurrences> &it)  {
+    inline Iter<TRepeat, MultiMemOccurences> &
+    goNext(Iter<TRepeat, MultiMemOccurences> &it)  {
         if (it._innerStep()) {
 //            it.tmp.i1 = saAt(it.subState.parentPtr, container(*it.mmemIt));
 //            it.tmp.i2 = saAt(it.subState.childPtr, container(*it.mmemIt));
@@ -715,23 +715,23 @@ namespace seqan
     }
 
     template < typename TRepeat >
-    inline bool atEnd(Iter<TRepeat, MultiMemOccurrences> const &it) {
+    inline bool atEnd(Iter<TRepeat, MultiMemOccurences> const &it) {
         return it._atEnd;
     }
 
     template < typename TRepeat >
-    inline bool atEnd(Iter<TRepeat, MultiMemOccurrences> &it) {
+    inline bool atEnd(Iter<TRepeat, MultiMemOccurences> &it) {
         return it._atEnd;
     }
 
 
     template <typename TSTree>
     struct Iterator< MultiMem<TSTree> > {
-        typedef Iter<MultiMem<TSTree>, MultiMemOccurrences> Type;
+        typedef Iter<MultiMem<TSTree>, MultiMemOccurences> Type;
     };
 
     template <typename TSTree>
-    struct Size< Iter<MultiMem<TSTree>, MultiMemOccurrences> > {
+    struct Size< Iter<MultiMem<TSTree>, MultiMemOccurences> > {
         typedef typename Size<TSTree>::Type Type;
     };
 

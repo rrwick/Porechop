@@ -112,6 +112,14 @@ clear(String<TValue, CStyle> & me);
 struct CStyle_;
 typedef Tag<CStyle_> CStyle;
 
+#ifdef PLATFORM_WINDOWS_VS
+#pragma warning( push )
+// Disable warning C4521 locally (multiple copy constructors).
+#pragma warning( disable: 4521 )
+// Disable warning C4522 locally (multiple assignment operators).
+#pragma warning( disable: 4522 )
+#endif  // PLATFORM_WINDOWS_VS
+
 template <typename TValue>
 class String <TValue, CStyle >
 {
@@ -211,6 +219,11 @@ public:
 // Define the static member
 template <typename TValue>
 TValue String<TValue, CStyle >::EMPTY_STRING = TValue();
+
+#ifdef PLATFORM_WINDOWS_VS
+// Reset warning state to previous one for C4521, C4522.
+#pragma warning( pop )
+#endif  // PLATFORM_WINDOWS_VS
 
 // ============================================================================
 // Metafunctions
@@ -582,11 +595,13 @@ struct CreateArrayStringExpand_
                 _deallocateStorage(target, buf, old_target_capacity);
             }
         }
-        assignValue(begin(target, Standard()), 0); //set target length to 0
-        assign(begin(target, Standard()), source, Insist());
-        typedef typename Iterator<TTarget>::Type TTargetIterator;
-        _setEnd(target, TTargetIterator( begin(target) + source_length));
-
+        if (length(source) > 0)
+        {
+            assignValue(begin(target, Standard()), 0); //set target length to 0
+            assign(begin(target, Standard()), source, Insist());
+            typedef typename Iterator<TTarget>::Type TTargetIterator;
+            _setEnd(target, TTargetIterator( begin(target) + source_length));
+        }
     }
 
     template <typename TTarget, typename TSource, typename TLimit>
