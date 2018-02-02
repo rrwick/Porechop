@@ -43,7 +43,6 @@ def main():
     if args.barcode_dir:
         forward_or_reverse_barcodes = choose_barcoding_kit(matching_sets, args.verbosity,
                                                            args.print_dest)
-        matching_sets = exclude_wrong_barcodes(matching_sets, forward_or_reverse_barcodes)
     else:
         forward_or_reverse_barcodes = None
 
@@ -388,20 +387,6 @@ def fix_up_1d2_sets(matching_sets):
                      if x.name == 'SQK-MAP006 Short'][0].best_start_or_end_score()
         if part_1_score >= sqk_score and part_2_score >= sqk_score:
             matching_sets = [x for x in matching_sets if x.name != 'SQK-MAP006 Short']
-    return matching_sets
-
-
-def exclude_wrong_barcodes(matching_sets, forward_or_reverse_barcodes):
-    """
-    Rapid reads shouldn't have end adapters, so we don't want to look for them if this seems to be
-    a rapid read set.
-    """
-    if forward_or_reverse_barcodes == 'forward':
-        matching_sets = [x for x in matching_sets
-                         if not ('Barcode' in x.name and '(reverse)' in x.name)]
-    elif forward_or_reverse_barcodes == 'reverse':
-        matching_sets = [x for x in matching_sets
-                         if not ('Barcode' in x.name and '(forward)' in x.name)]
     return matching_sets
 
 
