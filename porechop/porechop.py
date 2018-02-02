@@ -333,24 +333,43 @@ def choose_barcoding_kit(adapter_sets, verbosity, print_dest):
     If the user is sorting reads by barcode bin, choose one barcode configuration (rev comp
     barcodes at the start of the read or at the end of the read) and ignore the other.
     """
-    forward_barcodes = 0
-    reverse_barcodes = 0
+    # Tally up scores for forward and reverse barcodes.
+    forward_start_or_end, reverse_start_or_end = 0, 0
+    forward_start_and_end, reverse_start_and_end = 0, 0
     for adapter_set in adapter_sets:
-        score = adapter_set.best_start_or_end_score()
-        if 'Barcode' in adapter_set.name and '(forward)' in adapter_set.name:
-            forward_barcodes += score
-        elif 'Barcode' in adapter_set.name and '(reverse)' in adapter_set.name:
-            reverse_barcodes += score
-    if forward_barcodes > reverse_barcodes:
-        if verbosity > 0:
-            print('\nBarcodes determined to be in forward orientation', file=print_dest)
-        return 'forward'
-    elif reverse_barcodes > forward_barcodes:
-        if verbosity > 0:
-            print('\nBarcodes determined to be in reverse orientation', file=print_dest)
-        return 'reverse'
-    else:
-        return None
+        if 'barcode' in adapter_set.name.lower():
+            if '(forward)' in adapter_set.name.lower():
+                forward_start_or_end += adapter_set.best_start_or_end_score()
+                forward_start_and_end += adapter_set.best_start_score
+                forward_start_and_end += adapter_set.best_end_score
+            elif '(reverse)' in adapter_set.name.lower():
+                reverse_start_or_end += adapter_set.best_start_or_end_score()
+                reverse_start_and_end += adapter_set.best_start_score
+                reverse_start_and_end += adapter_set.best_end_score
+
+    if forward_start_or_end == 0 and reverse_start_or_end == 0:
+        sys.exit('Error: no barcodes were found, so Porechop cannot perform barcode demultiplexing')
+
+    # If possible, make a decision using each barcode's best start OR end score.
+    orientation = None
+    if forward_start_or_end > reverse_start_or_end:
+        orientation = 'forward'
+    elif reverse_start_or_end > forward_start_or_end:
+        orientation = 'reverse'
+
+    # If that didn't work (i.e. it's a tie between forward and reverse), then choose based on the
+    # sum of both start AND end scores.
+    elif forward_start_and_end > reverse_start_and_end:
+        orientation = 'forward'
+    elif reverse_start_and_end > forward_start_and_end:
+        orientation = 'reverse'
+
+    if orientation is None:
+        sys.exit('Error: Porechop could not determine barcode orientation')
+
+    if verbosity > 0:
+        print('\nBarcodes determined to be in ' + orientation + ' orientation', file=print_dest)
+    return orientation
 
 
 def fix_up_1d2_sets(matching_sets):
