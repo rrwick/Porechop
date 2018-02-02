@@ -172,7 +172,7 @@ def get_arguments():
                                         'reads with middle adapters are split) (required for '
                                         'reads to be used with Nanopolish, this option is on by '
                                         'default when outputting reads into barcode bins)')
-    middle_trim_group.add_argument('--middle_threshold', type=float, default=85.0,
+    middle_trim_group.add_argument('--middle_threshold', type=float, default=90.0,
                                    help='Adapters in the middle of reads must have at least this '
                                         'percent identity to be found (0 to 100)')
     middle_trim_group.add_argument('--extra_middle_trim_good_side', type=int, default=10,
