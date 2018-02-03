@@ -36,10 +36,10 @@ def main():
 
     matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
                                                args.scoring_scheme_vals, args.print_dest,
-                                               args.adapter_threshold, args.threads)
+                                               args.adapter_threshold, args.threads, custom_adapters=args.custom_adapters)
     matching_sets = exclude_end_adapters_for_rapid(matching_sets)
     matching_sets = fix_up_1d2_sets(matching_sets)
-    display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
+    display_adapter_set_results(matching_sets, args.verbosity, args.print_dest, custom_adapters=args.custom_adapters)
     matching_sets = add_full_barcode_adapter_sets(matching_sets)
 
     if args.barcode_dir:
@@ -143,7 +143,9 @@ def get_arguments():
     adapter_search_group.add_argument('--scoring_scheme', type=str, default='3,-6,-5,-2',
                                       help='Comma-delimited string of alignment scores: match, '
                                            'mismatch, gap open, gap extend')
-
+    adapter_search_group.add_argument('--custom_adapters', type=str, default=None,
+                                      help='Filepath to complementary custom adapters in csv format: '
+                                           'name,name start|end,sequence,barcode (boolean)')
     end_trim_group = parser.add_argument_group('End adapter settings',
                                                'Control the trimming of adapters from read ends')
     end_trim_group.add_argument('--end_size', type=int, default=150,
@@ -281,8 +283,39 @@ def get_albacore_barcode_from_path(albacore_path):
     return None
 
 
+def load_custom_adapters(custom_adapters):
+    '''
+    Load a set of custom adapters. The format should be:
+
+    name,name start|end,sequence,barcode (boolean) 
+
+    e.g.
+
+    pcr,pcr_forward,AGTC
+    pcr,pcr_reverse,TTGC
+    Barcode 01,bc01_forward,GGTA
+    Barcode 01,bc01_reverse,TTCT
+
+    Note that currently only pairs of adapters (start, end) are supported.
+    '''
+    from .adapters import Adapter
+    import csv
+
+    with open(custom_adapters, 'r') as fp:
+        f = csv.reader(fp, delimiter=',')
+
+        while True:
+            name, start, sequence_start = next(f)
+            _, end, sequence_end = next(f)    
+
+            yield Adapter(
+                name=name,
+                start_sequence=(start, sequence_start),
+                end_sequence=(end, sequence_end))
+
+
 def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_vals, print_dest,
-                               adapter_threshold, threads):
+                               adapter_threshold, threads, custom_adapters):
     """
     Aligns all of the adapter sets to the start/end of reads to see which (if any) matches best.
     """
@@ -291,7 +324,15 @@ def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_
         print(bold_underline('Looking for known adapter sets'), flush=True, file=print_dest)
         output_progress_line(0, read_count, print_dest)
 
-    search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
+
+    if not custom_adapters:
+        search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
+    else:
+        # Append custom_adapters to the default search_adapters.
+        CUSTOM_ADAPTERS = load_custom_adapters(custom_adapters)
+        [ADAPTERS.append(a) for a in CUSTOM_ADAPTERS]
+        search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
+
     search_adapter_count = len(search_adapters)
 
     # If single-threaded, do the work in a simple loop.
@@ -380,13 +421,15 @@ def fix_up_1d2_sets(matching_sets):
     return matching_sets
 
 
-def display_adapter_set_results(matching_sets, verbosity, print_dest):
+def display_adapter_set_results(matching_sets, verbosity, print_dest, custom_adapters):
     if verbosity < 1:
         return
     table = [['Set', 'Best read start %ID', 'Best read end %ID']]
     row_colours = {}
     matching_set_names = [x.name for x in matching_sets]
+
     search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
+
     for adapter_set in search_adapters:
         start_score = '%.1f' % adapter_set.best_start_score
         end_score = '%.1f' % adapter_set.best_end_score
