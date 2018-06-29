@@ -42,7 +42,7 @@ def main():
     display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
     matching_sets = add_full_barcode_adapter_sets(matching_sets)
 
-    if args.barcode_dir:
+    if args.barcode_dir or args.barcode_labels:
         forward_or_reverse_barcodes = choose_barcoding_kit(matching_sets, args.verbosity,
                                                            args.print_dest)
     else:
@@ -50,8 +50,11 @@ def main():
     if args.verbosity > 0:
         print('\n', file=args.print_dest)
 
+    if args.barcode_labels is not False:
+        print("adding barcodes as labels")
+        
     if matching_sets:
-        check_barcodes = (args.barcode_dir is not None)
+        check_barcodes = (args.barcode_dir is not None or args.barcode_labels is not False)
         find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
                                    args.extra_end_trim, args.end_threshold,
                                    args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
@@ -113,6 +116,8 @@ def get_arguments():
                                help='Reads will be binned based on their barcode and saved to '
                                     'separate files in this directory (incompatible with '
                                     '--output)')
+    barcode_group.add_argument('--barcode_labels', action='store_true',
+                               help='Reads will have a label added to their header with their barcode')
     barcode_group.add_argument('--barcode_threshold', type=float, default=75.0,
                                help='A read must have at least this percent identity to a barcode '
                                     'to be binned')

@@ -48,6 +48,12 @@ class NanoporeRead(object):
 
         self.albacore_barcode_call = None
 
+    def get_name(self):
+        if not self.barcode_call is None and not self.barcode_call == 'none':
+            return self.name + " barcode=" + self.barcode_call
+
+        return self.name
+
     def get_seq_with_start_end_adapters_trimmed(self):
         if not self.start_trim_amount and not self.end_trim_amount:
             return self.seq
@@ -96,13 +102,13 @@ class NanoporeRead(object):
                 seq = self.get_seq_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
-            return ''.join(['>', self.name, '\n', add_line_breaks_to_sequence(seq, 70)])
+            return ''.join(['>', self.get_name(), '\n', add_line_breaks_to_sequence(seq, 70)])
         elif discard_middle:
             return ''
         else:
             fasta_str = ''
             for i, split_read_part in enumerate(self.get_split_read_parts(min_split_read_size)):
-                read_name = add_number_to_read_name(self.name, i + 1)
+                read_name = add_number_to_read_name(self.get_name(), i + 1)
                 if not split_read_part[0]:  # Don't return empty sequences
                     return ''
                 seq = add_line_breaks_to_sequence(split_read_part[0], 70)
@@ -119,13 +125,13 @@ class NanoporeRead(object):
                 quals = self.get_quals_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
-            return ''.join(['@', self.name, '\n', seq, '\n+\n', quals, '\n'])
+            return ''.join(['@', self.get_name(), '\n', seq, '\n+\n', quals, '\n'])
         elif discard_middle:
             return ''
         else:
             fastq_str = ''
             for i, split_read_part in enumerate(self.get_split_read_parts(min_split_read_size)):
-                read_name = add_number_to_read_name(self.name, i + 1)
+                read_name = add_number_to_read_name(self.get_name(), i + 1)
                 if not split_read_part[0]:  # Don't return empty sequences
                     return ''
                 fastq_str += ''.join(['@', read_name, '\n', split_read_part[0], '\n+\n',
@@ -305,7 +311,7 @@ class NanoporeRead(object):
         def get_alignment_string(aln):
             return aln[0].name + ', full score=' + str(aln[1]) + ', partial score=' + \
                    str(aln[2]) + ', read position: ' + str(aln[3]) + '-' + str(aln[4])
-        output = self.name + '\n'
+        output = self.get_name() + '\n'
         output += '  start: ' + self.formatted_start_seq(end_size, extra_trim_size) + '...\n'
         if self.start_adapter_alignments:
             output += '    start alignments:\n'
@@ -374,7 +380,7 @@ class NanoporeRead(object):
     def middle_adapter_results(self, verbosity):
         if not self.middle_adapter_positions:
             return ''
-        results = self.name + '\n' + self.middle_hit_str
+        results = self.get_name() + '\n' + self.middle_hit_str
         if verbosity > 1:
             results += self.formatted_middle_seq() + '\n'
         return results
