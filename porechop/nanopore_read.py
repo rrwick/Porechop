@@ -48,8 +48,9 @@ class NanoporeRead(object):
 
         self.albacore_barcode_call = None
 
-    def get_name(self):
-        if not self.barcode_call is None and not self.barcode_call == 'none':
+    def get_name(self, barcode_labels=False):
+        # if barcode_labels and self.barcode_call is not None and self.barcode_call != 'none':
+        if barcode_labels:
             return self.name + " barcode=" + self.barcode_call
 
         return self.name
@@ -94,7 +95,7 @@ class NanoporeRead(object):
         split_read_parts = [x for x in split_read_parts if len(x[0]) >= min_split_read_size]
         return split_read_parts
 
-    def get_fasta(self, min_split_read_size, discard_middle, untrimmed=False):
+    def get_fasta(self, min_split_read_size, discard_middle, untrimmed=False, barcode_labels=False):
         if not self.middle_trim_positions:
             if untrimmed:
                 seq = self.seq
@@ -102,7 +103,7 @@ class NanoporeRead(object):
                 seq = self.get_seq_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
-            return ''.join(['>', self.get_name(), '\n', add_line_breaks_to_sequence(seq, 70)])
+            return ''.join(['>', self.get_name(barcode_labels), '\n', add_line_breaks_to_sequence(seq, 70)])
         elif discard_middle:
             return ''
         else:
@@ -115,7 +116,7 @@ class NanoporeRead(object):
                 fasta_str += ''.join(['>', read_name, '\n', seq])
             return fasta_str
 
-    def get_fastq(self, min_split_read_size, discard_middle, untrimmed=False):
+    def get_fastq(self, min_split_read_size, discard_middle, untrimmed=False, barcode_labels=False):
         if not self.middle_trim_positions:
             if untrimmed:
                 seq = self.seq
@@ -125,7 +126,7 @@ class NanoporeRead(object):
                 quals = self.get_quals_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
-            return ''.join(['@', self.get_name(), '\n', seq, '\n+\n', quals, '\n'])
+            return ''.join(['@', self.get_name(barcode_labels), '\n', seq, '\n+\n', quals, '\n'])
         elif discard_middle:
             return ''
         else:
