@@ -34,9 +34,12 @@ def main():
     reads, check_reads, read_type = load_reads(args.input, args.verbosity, args.print_dest,
                                                args.check_reads)
 
+    # construct a smaller set of search adapters with only the 12 barcodes to speed up the initial step
+    search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name and '(forward)' not in a.name]
+
     matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
                                                args.scoring_scheme_vals, args.print_dest,
-                                               args.adapter_threshold, args.threads)
+                                               args.adapter_threshold, args.threads, search_adapters)
     matching_sets = exclude_end_adapters_for_rapid(matching_sets)
     matching_sets = fix_up_1d2_sets(matching_sets)
     display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
@@ -49,16 +52,18 @@ def main():
         forward_or_reverse_barcodes = None
     if args.verbosity > 0:
         print('\n', file=args.print_dest)
-                
+
     if matching_sets:
-        check_barcodes = (args.barcode_dir is not None or args.barcode_labels is not False)
+        check_barcodes = (
+            args.barcode_dir is not None or args.barcode_labels is not False)
         find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
                                    args.extra_end_trim, args.end_threshold,
                                    args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
                                    args.threads, check_barcodes, args.barcode_threshold,
                                    args.barcode_diff, args.require_two_barcodes,
                                    forward_or_reverse_barcodes)
-        display_read_end_trimming_summary(reads, args.verbosity, args.print_dest)
+        display_read_end_trimming_summary(
+            reads, args.verbosity, args.print_dest)
 
         if not args.no_split:
             find_adapters_in_read_middles(reads, matching_sets, args.verbosity,
@@ -202,7 +207,8 @@ def get_arguments():
     args.scoring_scheme_vals = scoring_scheme
 
     if args.barcode_dir is not None and args.output is not None:
-        sys.exit('Error: only one of the following options may be used: --output, --barcode_dir')
+        sys.exit(
+            'Error: only one of the following options may be used: --output, --barcode_dir')
 
     if args.untrimmed and args.barcode_dir is None:
         sys.exit('Error: --untrimmed can only be used with --barcode_dir')
@@ -227,7 +233,8 @@ def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count)
     # first reads from that file.
     if os.path.isfile(input_file_or_directory):
         if verbosity > 0:
-            print('\n' + bold_underline('Loading reads'), flush=True, file=print_dest)
+            print('\n' + bold_underline('Loading reads'),
+                  flush=True, file=print_dest)
             print(input_file_or_directory, flush=True, file=print_dest)
         reads, read_type = load_fasta_or_fastq(input_file_or_directory)
         if read_type == 'FASTA':
@@ -240,13 +247,15 @@ def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count)
     # fastq files. The check reads will be spread over all of the input files.
     elif os.path.isdir(input_file_or_directory):
         if verbosity > 0:
-            print('\n' + bold_underline('Searching for FASTQ files'), flush=True, file=print_dest)
+            print('\n' + bold_underline('Searching for FASTQ files'),
+                  flush=True, file=print_dest)
         fastqs = sorted([os.path.join(dir_path, f)
                          for dir_path, _, filenames in os.walk(input_file_or_directory)
                          for f in filenames
                          if f.lower().endswith('.fastq') or f.lower().endswith('.fastq.gz')])
         if not fastqs:
-            sys.exit('Error: could not find fastq files in ' + input_file_or_directory)
+            sys.exit('Error: could not find fastq files in ' +
+                     input_file_or_directory)
         reads = []
         read_type = 'FASTQ'
         check_reads = []
@@ -269,7 +278,8 @@ def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count)
         sys.exit('Error: could not find ' + input_file_or_directory)
 
     if verbosity > 0:
-        print(int_to_str(len(reads)) + ' reads loaded\n\n', flush=True, file=print_dest)
+        print(int_to_str(len(reads)) + ' reads loaded\n\n',
+              flush=True, file=print_dest)
     return reads, check_reads, read_type
 
 
@@ -284,23 +294,28 @@ def get_albacore_barcode_from_path(albacore_path):
 
 
 def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_vals, print_dest,
-                               adapter_threshold, threads):
+                               adapter_threshold, threads, search_adapters=None):
     """
     Aligns all of the adapter sets to the start/end of reads to see which (if any) matches best.
     """
     read_count = len(check_reads)
     if verbosity > 0:
-        print(bold_underline('Looking for known adapter sets'), flush=True, file=print_dest)
+        print(bold_underline('Looking for known adapter sets'),
+              flush=True, file=print_dest)
         output_progress_line(0, read_count, print_dest)
 
-    search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
+    # If no set of search adapters are provided then use them all
+    if search_adapters is None:
+        search_adapters = [
+            a for a in ADAPTERS if '(full sequence)' not in a.name]
     search_adapter_count = len(search_adapters)
 
     # If single-threaded, do the work in a simple loop.
     if threads == 1:
         for read_num, read in enumerate(check_reads):
             for adapter_set in search_adapters:
-                read.align_adapter_set(adapter_set, end_size, scoring_scheme_vals)
+                read.align_adapter_set(
+                    adapter_set, end_size, scoring_scheme_vals)
             if verbosity > 0:
                 output_progress_line(read_num+1, read_count, print_dest)
 
@@ -313,7 +328,8 @@ def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_
             arg_list = []
             for read in check_reads:
                 for adapter_set in search_adapters:
-                    arg_list.append((read, adapter_set, end_size, scoring_scheme_vals))
+                    arg_list.append(
+                        (read, adapter_set, end_size, scoring_scheme_vals))
             finished_count = 0
             for _ in pool.imap(align_adapter_set_one_arg, arg_list):
                 finished_count += 1
@@ -322,7 +338,8 @@ def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_
                                          read_count, print_dest)
 
     if verbosity > 0:
-        output_progress_line(read_count, read_count, print_dest, end_newline=True)
+        output_progress_line(read_count, read_count,
+                             print_dest, end_newline=True)
 
     return [x for x in search_adapters if x.best_start_or_end_score() >= adapter_threshold]
 
@@ -342,11 +359,13 @@ def choose_barcoding_kit(adapter_sets, verbosity, print_dest):
             reverse_barcodes += score
     if forward_barcodes > reverse_barcodes:
         if verbosity > 0:
-            print('\nBarcodes determined to be in forward orientation', file=print_dest)
+            print('\nBarcodes determined to be in forward orientation',
+                  file=print_dest)
         return 'forward'
     elif reverse_barcodes > forward_barcodes:
         if verbosity > 0:
-            print('\nBarcodes determined to be in reverse orientation', file=print_dest)
+            print('\nBarcodes determined to be in reverse orientation',
+                  file=print_dest)
         return 'reverse'
     else:
         return None
@@ -378,7 +397,8 @@ def fix_up_1d2_sets(matching_sets):
         sqk_score = [x for x in matching_sets
                      if x.name == 'SQK-MAP006 Short'][0].best_start_or_end_score()
         if part_1_score >= sqk_score and part_2_score >= sqk_score:
-            matching_sets = [x for x in matching_sets if x.name != 'SQK-MAP006 Short']
+            matching_sets = [
+                x for x in matching_sets if x.name != 'SQK-MAP006 Short']
     return matching_sets
 
 
@@ -455,7 +475,8 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
                                scoring_scheme_vals, min_trim_size, check_barcodes,
                                forward_or_reverse_barcodes)
             if check_barcodes:
-                read.determine_barcode(barcode_threshold, barcode_diff, require_two_barcodes)
+                read.determine_barcode(
+                    barcode_threshold, barcode_diff, require_two_barcodes)
             if verbosity == 1:
                 output_progress_line(read_num+1, read_count, print_dest)
             elif verbosity == 2:
@@ -490,12 +511,14 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
             for out in pool.imap(start_end_trim_one_arg, arg_list):
                 finished_count += 1
                 if verbosity == 1:
-                    output_progress_line(finished_count, read_count, print_dest)
+                    output_progress_line(
+                        finished_count, read_count, print_dest)
                 elif verbosity > 1:
                     print(out, file=print_dest, flush=True)
 
     if verbosity == 1:
-        output_progress_line(read_count, read_count, print_dest, end_newline=True)
+        output_progress_line(read_count, read_count,
+                             print_dest, end_newline=True)
     if verbosity > 0:
         print('', file=print_dest)
 
@@ -551,7 +574,8 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
             if verbosity == 1:
                 output_progress_line(read_num+1, read_count, print_dest)
             if read.middle_adapter_positions and verbosity > 1:
-                print(read.middle_adapter_results(verbosity), file=print_dest, flush=True)
+                print(read.middle_adapter_results(
+                    verbosity), file=print_dest, flush=True)
 
     # If multi-threaded, use a thread pool.
     else:
@@ -569,19 +593,22 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
             for out in pool.imap(find_middle_adapters_one_arg, arg_list):
                 finished_count += 1
                 if verbosity == 1:
-                    output_progress_line(finished_count + 1, read_count, print_dest)
+                    output_progress_line(
+                        finished_count + 1, read_count, print_dest)
                 if verbosity > 1 and out:
                     print(out, file=print_dest, flush=True)
 
     if verbosity == 1:
-        output_progress_line(read_count, read_count, print_dest, end_newline=True)
+        output_progress_line(read_count, read_count,
+                             print_dest, end_newline=True)
         print('', flush=True, file=print_dest)
 
 
 def display_read_middle_trimming_summary(reads, discard_middle, verbosity, print_dest):
     if verbosity < 1:
         return
-    middle_trim_count = sum(1 if x.middle_adapter_positions else 0 for x in reads)
+    middle_trim_count = sum(
+        1 if x.middle_adapter_positions else 0 for x in reads)
     verb = 'discarded' if discard_middle else 'split'
     print(int_to_str(middle_trim_count) + ' / ' + int_to_str(len(reads)) + ' reads were ' + verb +
           ' based on middle adapters\n\n', file=print_dest)
@@ -638,20 +665,24 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
         if not os.path.isdir(barcode_dir):
             os.makedirs(barcode_dir)
         barcode_files = {}
-        barcode_read_counts, barcode_base_counts = defaultdict(int), defaultdict(int)
+        barcode_read_counts, barcode_base_counts = defaultdict(
+            int), defaultdict(int)
         for read in reads:
             barcode_name = read.barcode_call
             if discard_unassigned and barcode_name == 'none':
                 continue
             if out_format == 'fasta':
-                read_str = read.get_fasta(min_split_size, discard_middle, untrimmed, barcode_labels)
+                read_str = read.get_fasta(
+                    min_split_size, discard_middle, untrimmed, barcode_labels)
             else:
-                read_str = read.get_fastq(min_split_size, discard_middle, untrimmed, barcode_labels)
+                read_str = read.get_fastq(
+                    min_split_size, discard_middle, untrimmed, barcode_labels)
             if not read_str:
                 continue
             if barcode_name not in barcode_files:
                 barcode_files[barcode_name] = \
-                    open(os.path.join(barcode_dir, barcode_name + '.' + out_format), 'wt')
+                    open(os.path.join(barcode_dir,
+                                      barcode_name + '.' + out_format), 'wt')
             barcode_files[barcode_name].write(read_str)
             barcode_read_counts[barcode_name] += 1
             if untrimmed:
@@ -663,7 +694,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
 
         for barcode_name in sorted(barcode_files.keys()):
             barcode_files[barcode_name].close()
-            bin_filename = os.path.join(barcode_dir, barcode_name + '.' + out_format)
+            bin_filename = os.path.join(
+                barcode_dir, barcode_name + '.' + out_format)
 
             if gzipped_out:
                 if not os.path.isfile(bin_filename):
@@ -684,13 +716,14 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
 
         if verbosity > 0:
             print('')
-            print_table(table, print_dest, alignments='LRRL', max_col_width=60, col_separation=2)
+            print_table(table, print_dest, alignments='LRRL',
+                        max_col_width=60, col_separation=2)
 
     # Output to all reads to stdout.
     elif output is None:
         for read in reads:
-            read_str = read.get_fasta(min_split_size, discard_middle, barcode_labels = barcode_labels) if out_format == 'fasta' \
-                else read.get_fastq(min_split_size, discard_middle, barcode_labels = barcode_labels)
+            read_str = read.get_fasta(min_split_size, discard_middle, barcode_labels=barcode_labels) if out_format == 'fasta' \
+                else read.get_fastq(min_split_size, discard_middle, barcode_labels=barcode_labels)
             print(read_str, end='')
         if verbosity > 0:
             print('Done', flush=True, file=print_dest)
@@ -703,8 +736,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
             out_filename = output
         with open(out_filename, 'wt') as out:
             for read in reads:
-                read_str = read.get_fasta(min_split_size, discard_middle, barcode_labels = barcode_labels) if out_format == 'fasta' \
-                    else read.get_fastq(min_split_size, discard_middle, barcode_labels = barcode_labels)
+                read_str = read.get_fasta(min_split_size, discard_middle, barcode_labels=barcode_labels) if out_format == 'fasta' \
+                    else read.get_fastq(min_split_size, discard_middle, barcode_labels=barcode_labels)
                 out.write(read_str)
         if gzipped_out:
             subprocess.check_output(gzip_command + ' -c ' + out_filename + ' > ' + output,
