@@ -16,16 +16,19 @@ not, see <http://www.gnu.org/licenses/>.
 
 import argparse
 import os
+import os.path
 import sys
 import subprocess
 import multiprocessing
 import shutil
 import re
+import json
 from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
 from .adapters import ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter
 from .nanopore_read import NanoporeRead
+from .adapters import Adapter
 from .version import __version__
 
 
@@ -33,22 +36,8 @@ def main():
     args = get_arguments()
     reads, check_reads, read_type = load_reads(args.input, args.verbosity, args.print_dest,
                                                args.check_reads)
+    matching_sets,forward_or_reverse_barcodes = get_matching_sets(args,check_reads)
 
-    matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
-                                               args.scoring_scheme_vals, args.print_dest,
-                                               args.adapter_threshold, args.threads)
-    matching_sets = exclude_end_adapters_for_rapid(matching_sets)
-    matching_sets = fix_up_1d2_sets(matching_sets)
-    display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
-    matching_sets = add_full_barcode_adapter_sets(matching_sets)
-
-    if args.barcode_dir:
-        forward_or_reverse_barcodes = choose_barcoding_kit(matching_sets, args.verbosity,
-                                                           args.print_dest)
-    else:
-        forward_or_reverse_barcodes = None
-    if args.verbosity > 0:
-        print('\n', file=args.print_dest)
 
     if matching_sets:
         check_barcodes = (args.barcode_dir is not None)
@@ -133,6 +122,9 @@ def get_arguments():
     adapter_search_group = parser.add_argument_group('Adapter search settings',
                                                      'Control how the program determines which '
                                                      'adapter sets are present')
+    adapter_search_group.add_argument('--adapter_storage', type=str, default=None,
+                                      help='Name of a JSON file to store discovered adapters or '
+                                           'to load them (and skip discovery)')
     adapter_search_group.add_argument('--adapter_threshold', type=float, default=90.0,
                                       help='An adapter set has to have at least this percent '
                                            'identity to be labelled as present and trimmed off '
@@ -218,6 +210,44 @@ def get_arguments():
 
     return args
 
+
+def get_matching_sets(args,check_reads):
+    if args.adapter_storage is not None and os.path.exists(args.adapter_storage):
+        adapter_dict = json.load(open(args.adapter_storage))
+        assert adapter_dict["__version__"] == __version__, "Can only use adapter storage for version {}".format(__version__)
+        forward_or_reverse_barcodes = adapter_dict["forward_or_reverse_barcodes"]
+        matching_sets = [Adapter(name,**seqs) for name,seqs in adapter_dict["matching_sets"].items() ]
+
+    else:
+        matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
+                                                    args.scoring_scheme_vals, args.print_dest,
+                                                    args.adapter_threshold, args.threads)
+        matching_sets = exclude_end_adapters_for_rapid(matching_sets)
+        matching_sets = fix_up_1d2_sets(matching_sets)
+        display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
+        matching_sets = add_full_barcode_adapter_sets(matching_sets)
+
+        if args.barcode_dir:
+            forward_or_reverse_barcodes = choose_barcoding_kit(matching_sets, args.verbosity,
+                                                                args.print_dest)
+        else:
+            forward_or_reverse_barcodes = None
+        if args.verbosity > 0:
+            print('\n', file=args.print_dest)
+
+        if args.adapter_storage is not None:
+            adapter_dict={"__version__":__version__,
+                "forward_or_reverse_barcodes":forward_or_reverse_barcodes,
+                "matching_sets": {} }
+
+            for adapter in matching_sets:
+                adapter_dict["matching_sets"][adapter.name] = {
+                                "start_sequence":adapter.start_sequence,
+                                "end_sequence":adapter.end_sequence
+                                }
+            json.dump(adapter_dict,open(args.adapter_storage,"w"))
+
+    return matching_sets,forward_or_reverse_barcodes
 
 def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count):
 
