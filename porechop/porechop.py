@@ -24,7 +24,7 @@ import re
 from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
-from .adapters import ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter
+from .adapters import NATIVE_BARCODES, ALL_ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter
 from .nanopore_read import NanoporeRead
 from .version import __version__
 
@@ -34,15 +34,19 @@ def main():
     reads, check_reads, read_type = load_reads(args.input, args.verbosity, args.print_dest,
                                                args.check_reads)
 
-    # construct a smaller set of search adapters with only the 12 barcodes to speed up the initial step
-    search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name and '(forward)' not in a.name]
+    search_adapters = ALL_ADAPTERS
+
+    if args.native_barcodes:
+        # construct a smaller set of search adapters with only the 12 barcodes to speed up the initial step
+        # search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name and '(forward)' not in a.name]
+        search_adapters = NATIVE_BARCODES
 
     matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
                                                args.scoring_scheme_vals, args.print_dest,
                                                args.adapter_threshold, args.threads, search_adapters)
     matching_sets = exclude_end_adapters_for_rapid(matching_sets)
     matching_sets = fix_up_1d2_sets(matching_sets)
-    display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
+    display_adapter_set_results(search_adapters, matching_sets, args.verbosity, args.print_dest)
     matching_sets = add_full_barcode_adapter_sets(matching_sets)
 
     if args.barcode_dir or args.barcode_labels:
@@ -120,6 +124,8 @@ def get_arguments():
                                     '--output)')
     barcode_group.add_argument('--barcode_labels', action='store_true',
                                help='Reads will have a label added to their header with their barcode')
+    barcode_group.add_argument('--native_barcodes', action='store_true',
+                               help='Only attempts to match the 12 native barcodes')
     barcode_group.add_argument('--barcode_threshold', type=float, default=75.0,
                                help='A read must have at least this percent identity to a barcode '
                                     'to be binned')
@@ -300,14 +306,18 @@ def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_
     """
     read_count = len(check_reads)
     if verbosity > 0:
-        print(bold_underline('Looking for known adapter sets'),
-              flush=True, file=print_dest)
+        if search_adapters == NATIVE_BARCODES:
+            print(bold_underline('Looking for native barcodes'),
+                flush=True, file=print_dest)
+        else:        
+            print(bold_underline('Looking for known adapter sets'),
+                flush=True, file=print_dest)
         output_progress_line(0, read_count, print_dest)
 
     # If no set of search adapters are provided then use them all
     if search_adapters is None:
         search_adapters = [
-            a for a in ADAPTERS if '(full sequence)' not in a.name]
+            a for a in ALL_ADAPTERS if '(full sequence)' not in a.name]
     search_adapter_count = len(search_adapters)
 
     # If single-threaded, do the work in a simple loop.
@@ -402,13 +412,12 @@ def fix_up_1d2_sets(matching_sets):
     return matching_sets
 
 
-def display_adapter_set_results(matching_sets, verbosity, print_dest):
+def display_adapter_set_results(search_adapters, matching_sets, verbosity, print_dest):
     if verbosity < 1:
         return
     table = [['Set', 'Best read start %ID', 'Best read end %ID']]
     row_colours = {}
     matching_set_names = [x.name for x in matching_sets]
-    search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
     for adapter_set in search_adapters:
         start_score = '%.1f' % adapter_set.best_start_score
         end_score = '%.1f' % adapter_set.best_end_score
