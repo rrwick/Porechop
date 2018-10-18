@@ -5,6 +5,13 @@ Porechop is a tool for finding and removing adapters from [Oxford Nanopore](http
 Porechop also supports demultiplexing of Nanopore reads that were barcoded with the [Native Barcoding Kit](https://store.nanoporetech.com/native-barcoding-kit-1d.html), [PCR Barcoding Kit](https://store.nanoporetech.com/pcr-barcoding-kit-96.html) or [Rapid Barcoding Kit](https://store.nanoporetech.com/rapid-barcoding-sequencing-kit.html).
 
 
+### Oct 2018 update: Porechop is officially unsupported
+
+While I'm happy Porechop has so many users, it has always been a bit klugey and a pain to maintain. I don't have the time to give it the attention it deserves, so I'm going to now officially declare Porechop as abandonware (though the unanswered [issues](https://github.com/rrwick/Porechop/issues) and [pull requests](https://github.com/rrwick/Porechop/pulls) reveal that it already has been for some time). I've added a [known issues](#known-issues) section to the README to outline what I think is wrong with Porechop and how a reimplementation should look. I may someday (no promises though :stuck_out_tongue:) try to rewrite it from a blank canvas to address its faults.
+
+
+
+
 
 # Table of contents
 
@@ -24,6 +31,7 @@ Porechop also supports demultiplexing of Nanopore reads that were barcoded with 
     * [Verbose output](#verbose-output)
 * [Known adapters](#known-adapters)
 * [Full usage](#full-usage)
+* [Known issues](#known-issues)
 * [Acknowledgements](#acknowledgements)
 * [License](#license)
 
@@ -328,6 +336,40 @@ Help:
   -h, --help                     Show this help message and exit
   --version                      Show program's version number and exit
 ```
+
+
+
+# Known issues
+
+### Adapter search
+
+Porechop tries to automatically determine which adapters are present by looking at the reads, but this approach has a few issues:
+
+* As the number of kits/barcodes has grown, adapter-search part of the Porechop's pipeline has become increasingly slow.
+* Porechop only does the adapter search on a subset of reads, which means there can be problems with non-randomly ordered read sets (e.g. all barcode 1 reads at the start of a file, followed by barcode 2 reads, etc).
+* Many ONT adapters share common sequence with each other, making false positive adapter finds possible.
+
+A simpler solution (and in hindsight what I should have done) would be to require the kit and/or adapters from the user.  E.g. `porechop --sqk-lsk109` or `porechop --start_adapt ACGCTAGCATACGT`.
+
+
+### Performance
+
+Porechop uses [SeqAn](https://github.com/seqan/seqan) to perform its alignments in C++. This library is very flexible, but not as fast as some alternatives, such as [Edlib](https://github.com/Martinsos/edlib).
+
+Another performance issue is that Porechop uses [ctypes](https://docs.python.org/3/library/ctypes.html) to interface with its C++ code. Function calls with ctypes can have a bit of overhead, which means that Porechop cannot use threads very efficiently (it spends too much of its time in the Python code, which is intrinsically non-parallel).
+
+
+### Barcode demultiplexing
+
+I added demultiplexing to Porechop as an afterthought – it was already looking for barcodes to trim, so why not sort reads by barcodes too? This turned out to be a very useful feature, but in hindsight I think it might be simpler (and easier to maintain) if trimming and demultiplexing functionality were in separate tools.
+
+
+### Base-space problems
+
+I've encountered a couple of issues where adapter sequences are not properly basecalled, resulting in inconsistent sequence. Porechop trims in base-space, so this is a somewhat intractable problem. See [issue #40](https://github.com/rrwick/Porechop/issues/40) for an example.
+
+These have made me wonder if the adapter trimming should be done in signal-space instead, though that would be a more complex problem to solve. I hope that in the future ONT can integrate this kind of functionality directly into their basecallers.
+
 
 
 
