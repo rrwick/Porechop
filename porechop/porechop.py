@@ -21,25 +21,30 @@ import subprocess
 import multiprocessing
 import shutil
 import re
+import csv
 from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
-from .adapters import ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter
+from .adapters import Adapter, ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter
 from .nanopore_read import NanoporeRead
 from .version import __version__
 
-
 def main():
+    adapter_list = ADAPTERS
+
     args = get_arguments()
     reads, check_reads, read_type = load_reads(args.input, args.verbosity, args.print_dest,
                                                args.check_reads)
-
+    if args.barcode_file:
+        adapter_list += get_adapters_from_file(args.barcode_file)
     matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
                                                args.scoring_scheme_vals, args.print_dest,
-                                               args.adapter_threshold, args.threads)
+                                               args.adapter_threshold, args.threads,
+                                               adapter_list)
     matching_sets = exclude_end_adapters_for_rapid(matching_sets)
     matching_sets = fix_up_1d2_sets(matching_sets)
-    display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
+    display_adapter_set_results(matching_sets, args.verbosity, args.print_dest,
+                                adapter_list)
     matching_sets = add_full_barcode_adapter_sets(matching_sets)
 
     if args.barcode_dir:
@@ -109,6 +114,8 @@ def get_arguments():
     barcode_group = parser.add_argument_group('Barcode binning settings',
                                               'Control the binning of reads based on barcodes '
                                               '(i.e. barcode demultiplexing)')
+    barcode_group.add_argument('-f', '--barcode_file',
+                               help='Barcodes stored in this file will be searched for.')
     barcode_group.add_argument('-b', '--barcode_dir',
                                help='Reads will be binned based on their barcode and saved to '
                                     'separate files in this directory (incompatible with '
@@ -270,6 +277,46 @@ def load_reads(input_file_or_directory, verbosity, print_dest, check_read_count)
         print(int_to_str(len(reads)) + ' reads loaded\n\n', flush=True, file=print_dest)
     return reads, check_reads, read_type
 
+def get_adapters_from_file(adapter_filename):
+    '''
+    Reads adapters from a CSV file with a header column and column values in the
+    following order:
+
+        1 - Name
+        2 - Start sequence name
+        3 - Start sequence bases
+        4 - End sequence name
+        5 - End sequence bases
+
+    Returns a list of Adapter objects (one object for each row of the CSV).
+
+    Start and end sequences must both be specified (both_ends_sequence argument
+    of Adapter is not supported).
+    '''
+    new_adapters = []
+    n_args       = 5
+    with open(adapter_filename, 'r') as infile:
+        reader = csv.reader(infile)
+        next(reader)
+
+        for line in reader:
+            adapter_args = [None] * n_args
+            for i in range(n_args):
+                if line[i].strip() != "":
+                    adapter_args[i] = line[i].strip()
+            name = adapter_args[0]
+            if adapter_args[1] and adapter_args[2]:
+                start_sequence = (adapter_args[1].strip(),
+                                  adapter_args[2].strip())
+            else:
+                start_sequence = []
+            if adapter_args[3] and adapter_args[4]:
+                end_sequence = (adapter_args[3].strip(),
+                                adapter_args[4].strip())
+            else:
+                end_sequence = []
+            new_adapters.append(Adapter(name, start_sequence, end_sequence))
+    return new_adapters
 
 def get_albacore_barcode_from_path(albacore_path):
     if '/unclassified/' in albacore_path:
@@ -282,7 +329,7 @@ def get_albacore_barcode_from_path(albacore_path):
 
 
 def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_vals, print_dest,
-                               adapter_threshold, threads):
+                               adapter_threshold, threads, adapter_list):
     """
     Aligns all of the adapter sets to the start/end of reads to see which (if any) matches best.
     """
@@ -291,7 +338,7 @@ def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_
         print(bold_underline('Looking for known adapter sets'), flush=True, file=print_dest)
         output_progress_line(0, read_count, print_dest)
 
-    search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
+    search_adapters = [a for a in adapter_list if '(full sequence)' not in a.name]
     search_adapter_count = len(search_adapters)
 
     # If single-threaded, do the work in a simple loop.
@@ -380,13 +427,13 @@ def fix_up_1d2_sets(matching_sets):
     return matching_sets
 
 
-def display_adapter_set_results(matching_sets, verbosity, print_dest):
+def display_adapter_set_results(matching_sets, verbosity, print_dest, adapter_list):
     if verbosity < 1:
         return
     table = [['Set', 'Best read start %ID', 'Best read end %ID']]
     row_colours = {}
     matching_set_names = [x.name for x in matching_sets]
-    search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name]
+    search_adapters = [a for a in adapter_list if '(full sequence)' not in a.name]
     for adapter_set in search_adapters:
         start_score = '%.1f' % adapter_set.best_start_score
         end_score = '%.1f' % adapter_set.best_end_score
