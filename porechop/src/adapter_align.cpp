@@ -7,6 +7,25 @@
 #include <algorithm>
 #include <utility>
 
+#include <Python.h>
+
+// We don't export anything since we're not really making a python extension
+static PyMethodDef module_functions[] = {
+    {NULL, NULL, 0, NULL}
+};
+
+static struct PyModuleDef porechopHelpers = {
+    PyModuleDef_HEAD_INIT,
+    "porechopHelpers",
+    "porechop helper functions",
+    -1,
+    module_functions
+};
+
+PyMODINIT_FUNC PyInit_porechopHelpers(void) {
+    return PyModule_Create(&porechopHelpers);
+}
+
 
 char * adapterAlignment(char * readSeq, char * adapterSeq,
                         int matchScore, int mismatchScore, int gapOpenScore, int gapExtensionScore) {

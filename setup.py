@@ -11,8 +11,6 @@ if sys.version_info.major != 3 or sys.version_info.minor < 4:
 
 import os
 import shutil
-from distutils.command.build import build
-from distutils.core import Command
 import subprocess
 import multiprocessing
 import fnmatch
@@ -23,7 +21,7 @@ if not importlib.util.find_spec("setuptools"):
     import ez_setup
     ez_setup.use_setuptools()
 
-from setuptools import setup
+from setuptools import setup, Extension, Command
 from setuptools.command.install import install
 
 # Get the program version from another file.
@@ -33,39 +31,6 @@ with open('README.md', 'rb') as readme:
     LONG_DESCRIPTION = readme.read().decode()
 
 
-class PorechopBuild(build):
-    """
-    The build process runs the Makefile to build the C++ functions into a shared library.
-    """
-
-    def run(self):
-        build.run(self)  # Run original build code
-
-        clean_cmd = ['make', 'clean']
-        try:
-            make_cmd = ['make', '-j', str(min(8, multiprocessing.cpu_count()))]
-        except NotImplementedError:
-            make_cmd = ['make']
-
-        def clean_cpp():
-            subprocess.call(clean_cmd)
-
-        def compile_cpp():
-            subprocess.call(make_cmd)
-
-        self.execute(clean_cpp, [], 'Cleaning previous compilation: ' + ' '.join(clean_cmd))
-        self.execute(compile_cpp, [], 'Compiling Porechop: ' + ' '.join(make_cmd))
-
-
-class PorechopInstall(install):
-    """
-    The install process copies the C++ shared library to the install location.
-    """
-
-    def run(self):
-        install.run(self)  # Run original install code
-        shutil.copyfile(os.path.join('porechop', 'cpp_functions.so'),
-                        os.path.join(self.install_lib, 'porechop', 'cpp_functions.so'))
 
 
 class PorechopClean(Command):
@@ -109,6 +74,30 @@ class PorechopClean(Command):
             print('Deleting file:', delete_file)
             os.remove(delete_file)
 
+#TODO: enable these
+DEBUGFLAGS   = ['-DSEQAN_ENABLE_DEBUG=1', '-g']
+RELEASEFLAGS = ['-O3', '-D', 'NDEBUG']
+if 'debug' in sys.argv:
+    release_args = ['-DSEQAN_ENABLE_DEBUG=1', '-g']
+    sys.argv.remove('debug')
+else:
+    release_args = ['-O3', '-D', 'NDEBUG']
+
+extensions = []
+
+seqan_dirs = []
+for dirpath, dirnames, _ in os.walk(os.path.join('porechop', 'include', 'seqan')):
+    seqan_dirs.extend(os.path.join(dirpath, x) for x in dirnames)
+
+extensions.append(Extension(
+    'porechop.porechopHelpers',
+    sources=[os.path.join('porechop', 'src', x)
+        for x in ('adapter_align.cpp', 'alignment.cpp')
+    ],
+    include_dirs=[os.path.join('porechop', 'include')] + seqan_dirs,
+    extra_compile_args=['-std=c++14', '-fPIC', '-Wall', '-Wextra', '-pedantic'] + release_args
+))
+
 
 setup(name='porechop',
       version=__version__,
@@ -121,7 +110,6 @@ setup(name='porechop',
       packages=['porechop'],
       entry_points={"console_scripts": ['porechop = porechop.porechop:main']},
       zip_safe=False,
-      cmdclass={'build': PorechopBuild,
-                'install': PorechopInstall,
-                'clean': PorechopClean}
+      ext_modules=extensions,
+      cmdclass={'clean': PorechopClean},
       )

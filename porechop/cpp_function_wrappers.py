@@ -14,15 +14,14 @@ details. You should have received a copy of the GNU General Public License along
 not, see <http://www.gnu.org/licenses/>.
 """
 
+from ctypes import cdll, cast, c_char_p, c_int, c_void_p
 import os
 import sys
-from ctypes import CDLL, cast, c_char_p, c_int, c_void_p
 
-SO_FILE = 'cpp_functions.so'
-SO_FILE_FULL = os.path.join(os.path.dirname(os.path.realpath(__file__)), SO_FILE)
-if not os.path.isfile(SO_FILE_FULL):
-    sys.exit('could not find ' + SO_FILE + ' - please reinstall')
-C_LIB = CDLL(SO_FILE_FULL)
+
+from porechop import porechopHelpers
+lib_file = porechopHelpers.__file__
+C_LIB = cdll.LoadLibrary(lib_file)
 
 C_LIB.adapterAlignment.argtypes = [c_char_p,  # Read sequence
                                    c_char_p,  # Adapter sequence
