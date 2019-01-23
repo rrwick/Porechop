@@ -43,7 +43,9 @@ class Adapter(object):
         Gets the barcode name for the output files. We want a concise name, so it looks at all
         options and chooses the shortest.
         """
-        possible_names = [self.name, self.start_sequence[0]]
+        possible_names = [self.name]
+        if self.start_sequence:
+            possible_names.append(self.start_sequence[0])
         if self.end_sequence:
             possible_names.append(self.end_sequence[0])
         barcode_name = sorted(possible_names, key=lambda x: len(x))[0]
@@ -76,28 +78,36 @@ ADAPTERS = [Adapter('SQK-NSK007',
                     start_sequence=('SQK-NSK007_Y_Top', 'AATGTACTTCGTTCAGTTACGTATTGCT'),
                     end_sequence=('SQK-NSK007_Y_Bottom', 'GCAATACGTAACTGAACGAAGT')),
 
+
             Adapter('Rapid',
-                    start_sequence=('Rapid_adapter', 'GTTTTCGCATTTATCGTGAAACGCTTTCGCGTTTTTCGTGCGCCGCTTCA')),
+                    start_sequence=('Rapid_adapter',
+                                    'GTTTTCGCATTTATCGTGAAACGCTTTCGCGTTTTTCGTGCGCCGCTTCA')),
+
+            Adapter('RBK004_upstream',
+                    start_sequence=('RBK004_upstream', 'AATGTACTTCGTTCAGTTACGGCTTGGGTGTTTAACC')),
+
 
             Adapter('SQK-MAP006',
-                            start_sequence=('SQK-MAP006_Y_Top_SK63',    'GGTTGTTTCTGTTGGTGCTGATATTGCT'),
-                            end_sequence=  ('SQK-MAP006_Y_Bottom_SK64', 'GCAATATCAGCACCAACAGAAA')),
+                    start_sequence=('SQK-MAP006_Y_Top_SK63',    'GGTTGTTTCTGTTGGTGCTGATATTGCT'),
+                    end_sequence=  ('SQK-MAP006_Y_Bottom_SK64', 'GCAATATCAGCACCAACAGAAA')),
 
-            Adapter('SQK-MAP006 Short',
+            Adapter('SQK-MAP006 short',
                     start_sequence=('SQK-MAP006_Short_Y_Top_LI32',    'CGGCGTCTGCTTGGGTGTTTAACCT'),
                     end_sequence=  ('SQK-MAP006_Short_Y_Bottom_LI33', 'GGTTAAACACCCAAGCAGACGCCG')),
 
+
+            # The PCR adapters are used both in PCR DNA kits and some cDNA kits.
             Adapter('PCR adapters 1',
                     start_sequence=('PCR_1_start', 'ACTTGCCTGTCGCTCTATCTTC'),
-                    end_sequence=  ('PCR_1_end', 'GAAGATAGAGCGACAGGCAAGT')),
+                    end_sequence=  ('PCR_1_end',   'GAAGATAGAGCGACAGGCAAGT')),
 
-            Adapter('PCR tail 1',
-                    start_sequence=('PCR_tail_1_start', 'TTAACCTTTCTGTTGGTGCTGATATTGC'),
-                    end_sequence=  ('PCR_tail_1_end',   'GCAATATCAGCACCAACAGAAAGGTTAA')),
+            Adapter('PCR adapters 2',
+                    start_sequence=('PCR_2_start', 'TTTCTGTTGGTGCTGATATTGC'),
+                    end_sequence=  ('PCR_2_end',   'GCAATATCAGCACCAACAGAAA')),
 
-            Adapter('PCR tail 2',
-                    start_sequence=('PCR_tail_2_start', 'TTAACCTACTTGCCTGTCGCTCTATCTTC'),
-                    end_sequence=  ('PCR_tail_2_end',   'GAAGATAGAGCGACAGGCAAGTAGGTTAA')),
+            Adapter('PCR adapters 3',
+                    start_sequence=('PCR_3_start', 'TACTTGCCTGTCGCTCTATCTTC'),
+                    end_sequence=  ('PCR_3_end',   'GAAGATAGAGCGACAGGCAAGTA')),
 
 
             # 1D^2 kit adapters are interesting. ONT provided the following sequences on their site:
@@ -115,6 +125,11 @@ ADAPTERS = [Adapter('SQK-NSK007',
                     end_sequence=  ('1D2_part_2_end',   'CACCCAAGCAGACGCCAGCAATACGTAACT')),
             # The middle part of the provided sequences is less common, so I've left it out of the
             # adapter sequences here.
+
+
+            Adapter('cDNA SSP',
+                    start_sequence=('cDNA_SSP',     'TTTCTGTTGGTGCTGATATTGCTGCCATTACGGCCGGG'),
+                    end_sequence=  ('cDNA_SSP_rev', 'CCCGGCCGTAATGGCAGCAATATCAGCACCAACAGAAA')),
 
 
             # Some barcoding kits (like the native barcodes) use the rev comp barcode at the start
@@ -461,11 +476,23 @@ def make_full_native_barcode_adapter(barcode_num):
                    end_sequence=('NB' + '%02d' % barcode_num + '_end', end_full_seq))
 
 
-def make_full_rapid_barcode_adapter(barcode_num):
+def make_old_full_rapid_barcode_adapter(barcode_num):  # applies to SQK-RBK001
     barcode = [x for x in ADAPTERS if x.name == 'Barcode ' + str(barcode_num) + ' (forward)'][0]
     start_barcode_seq = barcode.start_sequence[1]
 
-    start_full_seq = 'AATGTACTTCGTTCAGTTACGTATTGCT' + start_barcode_seq + 'GTTTTCGCATTTATCGTGAAACGCTTTCGCGTTTTTCGTGCGCCGCTTCA'
+    start_full_seq = 'AATGTACTTCGTTCAGTTACG' + 'TATTGCT' + start_barcode_seq + \
+                     'GTTTTCGCATTTATCGTGAAACGCTTTCGCGTTTTTCGTGCGCCGCTTCA'
 
-    return Adapter('Rapid barcoding ' + str(barcode_num) + ' (full sequence)',
+    return Adapter('Rapid barcoding ' + str(barcode_num) + ' (full sequence, old)',
+                   start_sequence=('RB' + '%02d' % barcode_num + '_full', start_full_seq))
+
+
+def make_new_full_rapid_barcode_adapter(barcode_num):  # applies to SQK-RBK004
+    barcode = [x for x in ADAPTERS if x.name == 'Barcode ' + str(barcode_num) + ' (forward)'][0]
+    start_barcode_seq = barcode.start_sequence[1]
+
+    start_full_seq = 'AATGTACTTCGTTCAGTTACG' + 'GCTTGGGTGTTTAACC' + start_barcode_seq + \
+                     'GTTTTCGCATTTATCGTGAAACGCTTTCGCGTTTTTCGTGCGCCGCTTCA'
+
+    return Adapter('Rapid barcoding ' + str(barcode_num) + ' (full sequence, new)',
                    start_sequence=('RB' + '%02d' % barcode_num + '_full', start_full_seq))

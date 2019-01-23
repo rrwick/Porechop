@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -219,60 +219,44 @@ public:
 
 inline std::string _typeToString(ArgParseArgument const & me)
 {
-    std::string typeName = "";
-
     switch (me._argumentType)
     {
-    case ArgParseArgument::BOOL:
-        typeName = "bool";
-        break;
+        case ArgParseArgument::BOOL:
+            return "bool";
 
-    case ArgParseArgument::DOUBLE:
-        typeName = "double";
-        break;
+        case ArgParseArgument::DOUBLE:
+            return "double";
 
-    case ArgParseArgument::INTEGER:
-        typeName = "integer";
-        break;
+        case ArgParseArgument::INTEGER:
+            return "integer";
 
-    case ArgParseArgument::INT64:
-        typeName = "int64";
-        break;
+        case ArgParseArgument::INT64:
+            return "int64";
 
-    case ArgParseArgument::STRING:
-        typeName = "string";
-        break;
+        case ArgParseArgument::STRING:
+            return "string";
 
-    case ArgParseArgument::INPUT_FILE:
-        typeName = "input_file";
-        break;
+        case ArgParseArgument::INPUT_FILE:
+            return "input_file";
 
-    case ArgParseArgument::OUTPUT_FILE:
-        typeName = "output_file";
-        break;
+        case ArgParseArgument::OUTPUT_FILE:
+            return "output_file";
 
-    case ArgParseArgument::INPUT_PREFIX:
-        typeName = "input_prefix";
-        break;
+        case ArgParseArgument::INPUT_PREFIX:
+            return "input_prefix";
 
-    case ArgParseArgument::OUTPUT_PREFIX:
-        typeName = "output_prefix";
-        break;
+        case ArgParseArgument::OUTPUT_PREFIX:
+            return "output_prefix";
 
-    case ArgParseArgument::INPUT_DIRECTORY:
-        typeName = "input_directory";
-        break;
+        case ArgParseArgument::INPUT_DIRECTORY:
+            return "input_directory";
 
-    case ArgParseArgument::OUTPUT_DIRECTORY:
-        typeName = "output_directory";
-        break;
+        case ArgParseArgument::OUTPUT_DIRECTORY:
+            return "output_directory";
 
-    default:
-        typeName = "unknown";
-        break;
+        default:
+            return "unknown";
     }
-
-    return typeName;
 }
 
 // ----------------------------------------------------------------------------
@@ -450,6 +434,28 @@ inline bool isInputFileArgument(ArgParseArgument const & me)
 inline bool isOutputFileArgument(ArgParseArgument const & me)
 {
     return me._argumentType == ArgParseArgument::OUTPUT_FILE ||
+           me._argumentType == ArgParseArgument::OUTPUT_DIRECTORY;
+}
+
+// ----------------------------------------------------------------------------
+// Function isDirectoryArgument()
+// ----------------------------------------------------------------------------
+
+/*!
+ * @fn ArgParseArgument#isDirectoryArgument
+ * @headerfile <seqan/arg_parse.h>
+ * @brief Returns whether the argument is a directorz argument.
+ *
+ * @signature bool isDirectoryArgument(arg);
+ *
+ * @param[in] arg The ArgParseArgument to query.
+ *
+ * @return bool <tt>true</tt> if it is a directory argument, <tt>false</tt> otherwise.
+ */
+
+inline bool isDirectoryArgument(ArgParseArgument const & me)
+{
+    return me._argumentType == ArgParseArgument::INPUT_DIRECTORY ||
            me._argumentType == ArgParseArgument::OUTPUT_DIRECTORY;
 }
 
@@ -939,7 +945,15 @@ inline void _checkValue(ArgParseArgument const & me)
 {
     unsigned i = 0;
     for (std::vector<std::string>::const_iterator it = me.value.begin(); it != me.value.end(); ++it, ++i)
-        _checkValue(me, *it, i);
+    {
+        auto val = *it;
+
+        if (isDirectoryArgument(me)) // strip trailing slash for directories
+            if (val[length(val) - 1] == '/')
+                val.resize(length(val) - 1);
+
+        _checkValue(me, val, i);
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -1153,6 +1167,10 @@ inline std::string getFileExtension(ArgParseArgument const & me, unsigned pos = 
     std::string value = getArgumentValue(me, pos);
     if (value.empty())
         return "";
+
+    if (isDirectoryArgument(me)) // strip trailing slash for directories
+        if (value[length(value) - 1] == '/')
+            value.resize(length(value) - 1);
 
     // If there is a list of valid values then we look for each of these in the path.
     if (!me.validValues.empty())

@@ -23,7 +23,13 @@ class NanoporeRead(object):
     def __init__(self, name, seq, quals):
         self.name = name
 
-        self.seq = seq
+        self.seq = seq.upper()
+        if self.seq.count('U') > self.seq.count('T'):
+            self.rna = True
+            self.seq = self.seq.replace('U', 'T')
+        else:
+            self.rna = False
+
         self.quals = quals
         if len(quals) < len(seq):
             self.quals += '+' * (len(seq) - len(quals))
@@ -96,6 +102,8 @@ class NanoporeRead(object):
                 seq = self.get_seq_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
+            if self.rna:
+                seq = seq.replace('T', 'U')
             return ''.join(['>', self.name, '\n', add_line_breaks_to_sequence(seq, 70)])
         elif discard_middle:
             return ''
@@ -106,6 +114,8 @@ class NanoporeRead(object):
                 if not split_read_part[0]:  # Don't return empty sequences
                     return ''
                 seq = add_line_breaks_to_sequence(split_read_part[0], 70)
+                if self.rna:
+                    seq = seq.replace('T', 'U')
                 fasta_str += ''.join(['>', read_name, '\n', seq])
             return fasta_str
 
@@ -119,6 +129,8 @@ class NanoporeRead(object):
                 quals = self.get_quals_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
+            if self.rna:
+                seq = seq.replace('T', 'U')
             return ''.join(['@', self.name, '\n', seq, '\n+\n', quals, '\n'])
         elif discard_middle:
             return ''
@@ -126,10 +138,12 @@ class NanoporeRead(object):
             fastq_str = ''
             for i, split_read_part in enumerate(self.get_split_read_parts(min_split_read_size)):
                 read_name = add_number_to_read_name(self.name, i + 1)
-                if not split_read_part[0]:  # Don't return empty sequences
+                seq, qual = split_read_part[0], split_read_part[1]
+                if not seq:  # Don't return empty sequences
                     return ''
-                fastq_str += ''.join(['@', read_name, '\n', split_read_part[0], '\n+\n',
-                                      split_read_part[1], '\n'])
+                if self.rna:
+                    seq = seq.replace('T', 'U')
+                fastq_str += ''.join(['@', read_name, '\n', seq, '\n+\n', qual, '\n'])
             return fastq_str
 
     def align_adapter_set(self, adapter_set, end_size, scoring_scheme_vals):
@@ -138,10 +152,11 @@ class NanoporeRead(object):
         This is not to determine where to trim the reads, but rather to figure out which adapter
         sets are present in the data.
         """
-        read_seq_start = self.seq[:end_size]
-        score, _, _, _ = align_adapter(read_seq_start, adapter_set.start_sequence[1],
-                                       scoring_scheme_vals)
-        adapter_set.best_start_score = max(adapter_set.best_start_score, score)
+        if adapter_set.start_sequence:
+            read_seq_start = self.seq[:end_size]
+            score, _, _, _ = align_adapter(read_seq_start, adapter_set.start_sequence[1],
+                                           scoring_scheme_vals)
+            adapter_set.best_start_score = max(adapter_set.best_start_score, score)
         if adapter_set.end_sequence:
             read_seq_end = self.seq[-end_size:]
             score, _, _, _ = align_adapter(read_seq_end, adapter_set.end_sequence[1],
@@ -156,6 +171,8 @@ class NanoporeRead(object):
         """
         read_seq_start = self.seq[:end_size]
         for adapter in adapters:
+            if not adapter.start_sequence:
+                continue
             full_score, partial_score, read_start, read_end = \
                 align_adapter(read_seq_start, adapter.start_sequence[1], scoring_scheme_vals)
             if partial_score > end_threshold and read_end != end_size and \
