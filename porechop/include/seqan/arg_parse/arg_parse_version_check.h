@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2016, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -68,18 +68,18 @@ struct VersionControlTags_
     static constexpr char const * const UNREGISTERED_APP   = "UNREGISTERED_APP";
 
     static constexpr char const * const MESSAGE_SEQAN_UPDATE =
-        "[SEQAN INFO] :: There is a newer SeqAn version available!\n"
+        "[SEQAN INFO] :: A new SeqAn version is available online.\n"
         "[SEQAN INFO] :: Please visit www.seqan.de for an update or inform the developer of this app.\n"
-        "[SEQAN INFO] :: If you don't want to recieve this message again set --version-check OFF\n\n";
+        "[SEQAN INFO] :: If you don't wish to receive further notifications, set --version-check OFF.\n\n";
     static constexpr char const * const MESSAGE_APP_UPDATE =
-        "[APP INFO] :: There is a newer version of this application available.\n"
-        "[APP INFO] :: If this app is developed by SeqAn, visit www.seqan.de for updates.\n"
-        "[APP INFO] :: If you don't want to recieve this message again set --version_check OFF\n\n";
+        "[APP INFO] :: A new version of this application is now available.\n"
+        "[APP INFO] :: Visit www.seqan.de for updates of official SeqAn applications.\n"
+        "[APP INFO] :: If you don't wish to receive further notifications, set --version-check OFF.\n\n";
     static constexpr char const * const MESSAGE_UNREGISTERED_APP =
         "[SEQAN INFO] :: Thank you for using SeqAn!\n"
-        "[SEQAN INFO] :: You might want to regsiter you app for support and version check features?\n"
-        "[SEQAN INFO] :: Just send us an email to seqan@team.fu-berlin.de with your app name and version number.\n"
-        "[SEQAN INFO] :: If you don't want to recieve this message anymore set --version_check OFF\n\n";
+        "[SEQAN INFO] :: Do you wish to register your app for update notifications?\n"
+        "[SEQAN INFO] :: Just send an email to support@seqan.de with your app name and version number.\n"
+        "[SEQAN INFO] :: If you don't wish to receive further notifications, set --version-check OFF.\n\n";
     static constexpr char const * const MESSAGE_REGISTERED_APP_UPDATE =
         "[APP INFO] :: We noticed the app version you use is newer than the one registered with us.\n"
         "[APP INFO] :: Please send us an email with the new version so we can correct it (support@seqan.de)\n\n";
@@ -109,6 +109,7 @@ struct VersionCheck
     std::string _program;
     std::string _command;
     std::string _path = _getPath();
+    std::string _timestamp_filename;
     std::ostream & errorStream;
 
     // ----------------------------------------------------------------------------
@@ -122,6 +123,11 @@ struct VersionCheck
         errorStream(errorStream)
     {
         std::smatch versionMatch;
+#if defined(NDEBUG) || defined(SEQAN_TEST_VERSION_CHECK_)
+        _timestamp_filename = _path + "/" + _name + "_usr.timestamp";
+#else
+        _timestamp_filename = _path + "/" + _name + "_dev.timestamp";
+#endif
         if (!version.empty() &&
             std::regex_search(version, versionMatch, std::regex("^([[:digit:]]+\\.[[:digit:]]+\\.[[:digit:]]+).*")))
         {
@@ -318,11 +324,11 @@ inline std::string _getPath()
 // Function _getFileTimeDiff()
 // ----------------------------------------------------------------------------
 
-inline double _getFileTimeDiff(std::string const & timestamp_filename)
+inline double _getFileTimeDiff(VersionCheck const & me)
 {
     double curr = static_cast<double>(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
     std::ifstream timestamp_file;
-    timestamp_file.open(timestamp_filename.c_str());
+    timestamp_file.open(me._timestamp_filename.c_str());
 
     if (timestamp_file.is_open())
     {
@@ -390,8 +396,7 @@ inline void _readVersionStrings(std::vector<std::string> & versions, std::string
 inline void _callServer(VersionCheck const me, std::promise<bool> prom)
 {
     // update timestamp
-    std::string timestamp_filename(me._path + "/" + me._name + ".timestamp");
-    std::ofstream timestamp_file(timestamp_filename.c_str());
+    std::ofstream timestamp_file(me._timestamp_filename.c_str());
     if (timestamp_file.is_open())
     {
         timestamp_file << std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -419,9 +424,8 @@ inline void _checkForNewerVersion(VersionCheck & me, std::promise<bool> prom)
     }
 
     std::string version_filename(me._path + "/" + me._name + ".version");
-    std::string timestamp_filename(me._path + "/" + me._name + ".timestamp");
     double min_time_diff(86400);                                 // one day = 86400 seonds
-    double file_time_diff(_getFileTimeDiff(timestamp_filename)); // time difference in seconds
+    double file_time_diff(_getFileTimeDiff(me)); // time difference in seconds
 
     if (file_time_diff < min_time_diff)
     {
@@ -447,18 +451,20 @@ inline void _checkForNewerVersion(VersionCheck & me, std::promise<bool> prom)
         me.errorStream << VersionControlTags_<>::MESSAGE_UNREGISTERED_APP;
 #endif
 
-#if defined(NDEBUG) || defined(SEQAN_TEST_VERSION_CHECK_) // only check app version in release or testing mode
     if (!str_server_versions[0].empty() & !(str_server_versions[0] == VersionControlTags_<>::UNREGISTERED_APP)) // app version
     {
         Lexical<> version_comp(_getNumbersFromString(me._version), _getNumbersFromString(str_server_versions[0]));
 
+#if defined(NDEBUG) || defined(SEQAN_TEST_VERSION_CHECK_) // only check app version in release or testing mode
         if (isLess(version_comp))
             me.errorStream << VersionControlTags_<>::MESSAGE_APP_UPDATE;
-
-        else if (isGreater(version_comp))
-            me.errorStream << VersionControlTags_<>::MESSAGE_REGISTERED_APP_UPDATE;
-    }
 #endif // defined(NDEBUG) || defined(SEQAN_TEST_VERSION_CHECK_)
+
+#if !defined(NDEBUG) || defined(SEQAN_TEST_VERSION_CHECK_) // only notify developer that app version should be updated on server
+        if (isGreater(version_comp))
+            me.errorStream << VersionControlTags_<>::MESSAGE_REGISTERED_APP_UPDATE;
+#endif // !defined(NDEBUG) || defined(SEQAN_TEST_VERSION_CHECK_)
+    }
 
     if (me._program.empty())
     {

@@ -1,7 +1,7 @@
 // ==========================================================================
 //                 SeqAn - The Library for Sequence Analysis
 // ==========================================================================
-// Copyright (c) 2006-2015, Knut Reinert, FU Berlin
+// Copyright (c) 2006-2018, Knut Reinert, FU Berlin
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -218,7 +218,7 @@ inline bool goDown(Iter<Index<TText, BidirectionalIndex<TIndexSpec> >, VSTree<To
 {
     if (goDown(_iter(it, Fwd())))
     {
-        update(it, Fwd());
+        _update(it, Fwd());
         return true;
     }
     return false;
@@ -229,7 +229,7 @@ inline bool goDown(Iter<Index<TText, BidirectionalIndex<TIndexSpec> >, VSTree<To
 {
     if (goDown(_iter(it, Rev())))
     {
-        update(it, Rev());
+        _update(it, Rev());
         return true;
     }
     return false;
@@ -253,7 +253,7 @@ _goDownObject(
 {
     if (_goDownChar(_iter(it, TDirection()), obj))
     {
-        update(it, TDirection());
+        _update(it, TDirection());
         return true;
     }
     return false;
@@ -349,7 +349,7 @@ inline bool goRight(Iter<Index<TText, BidirectionalIndex<TIndexSpec> >, VSTree<T
 {
     if (goRight(_iter(it, Tag<TDirection>())))
     {
-        update(it, Tag<TDirection>());
+        _updateOnGoRight(it, Tag<TDirection>());
         return true;
     }
     return false;
