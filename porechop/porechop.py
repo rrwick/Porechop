@@ -39,25 +39,6 @@ def main():
                                                args.check_reads)
     matching_sets,forward_or_reverse_barcodes = get_matching_sets(args,check_reads)
 
-<<<<<<< HEAD
-=======
-    matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
-                                               args.scoring_scheme_vals, args.print_dest,
-                                               args.adapter_threshold, args.threads)
-    matching_sets = fix_up_1d2_sets(matching_sets)
-
-    if args.barcode_dir:
-        forward_or_reverse_barcodes = choose_barcoding_kit(matching_sets, args.verbosity,
-                                                           args.print_dest)
-    else:
-        forward_or_reverse_barcodes = None
-
-    display_adapter_set_results(matching_sets, args.verbosity, args.print_dest)
-    matching_sets = add_full_barcode_adapter_sets(matching_sets)
-
-    if args.verbosity > 0:
-        print('\n', file=args.print_dest)
->>>>>>> upstream/master
 
     if matching_sets:
         check_barcodes = (args.barcode_dir is not None)
