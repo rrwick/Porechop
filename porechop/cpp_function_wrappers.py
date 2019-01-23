@@ -21,7 +21,7 @@ from ctypes import CDLL, cast, c_char_p, c_int, c_void_p
 SO_FILE = 'cpp_functions.so'
 SO_FILE_FULL = os.path.join(os.path.dirname(os.path.realpath(__file__)), SO_FILE)
 if not os.path.isfile(SO_FILE_FULL):
-    sys.exit('could not find ' + SO_FILE + ' - please reinstall')
+    sys.exit('could not find ' + SO_FILE_FULL + ' - please reinstall')
 C_LIB = CDLL(SO_FILE_FULL)
 
 C_LIB.adapterAlignment.argtypes = [c_char_p,  # Read sequence
