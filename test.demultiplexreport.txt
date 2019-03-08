@@ -4111,18 +4111,18 @@ ATCAGTAGCCACTTCGTTCAGTTACGTATTAAGGTTAAGACCGCACCTGCCTTTGCGAGAGAACAGCACCTAGGAGCAAT
 
 [1m[4mSaving untrimmed reads to barcode-specific files[0m
 
-  [4mBarcode  Reads  Bases    File               [0m
-  BC01        72   42,073  temp_dir/BC01.fastq
-  BC02       377  243,958  temp_dir/BC02.fastq
-  BC03        51   43,254  temp_dir/BC03.fastq
-  BC04       293  205,944  temp_dir/BC04.fastq
-  BC05       198  144,330  temp_dir/BC05.fastq
-  BC06       400  230,556  temp_dir/BC06.fastq
-  BC07        41   23,650  temp_dir/BC07.fastq
-  BC08       380  234,471  temp_dir/BC08.fastq
-  BC09       287  186,514  temp_dir/BC09.fastq
-  BC10         6    3,613  temp_dir/BC10.fastq
-  BC11       369  223,566  temp_dir/BC11.fastq
-  BC12       110   64,591  temp_dir/BC12.fastq
-  none     1,404  767,358  temp_dir/none.fastq
+  [4mBarcode  Reads  Bases    File                         [0m
+  BC01        72   42,073  demultiplexed_test/BC01.fastq
+  BC02       377  243,958  demultiplexed_test/BC02.fastq
+  BC03        51   43,254  demultiplexed_test/BC03.fastq
+  BC04       293  205,944  demultiplexed_test/BC04.fastq
+  BC05       198  144,330  demultiplexed_test/BC05.fastq
+  BC06       400  230,556  demultiplexed_test/BC06.fastq
+  BC07        41   23,650  demultiplexed_test/BC07.fastq
+  BC08       380  234,471  demultiplexed_test/BC08.fastq
+  BC09       287  186,514  demultiplexed_test/BC09.fastq
+  BC10         6    3,613  demultiplexed_test/BC10.fastq
+  BC11       369  223,566  demultiplexed_test/BC11.fastq
+  BC12       110   64,591  demultiplexed_test/BC12.fastq
+  none     1,404  767,358  demultiplexed_test/none.fastq
 

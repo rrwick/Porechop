@@ -36,6 +36,7 @@ class NanoporeRead(object):
         self.middle_adapter_positions = set()
         self.middle_trim_positions = set()
         self.middle_hit_str = ''
+        self.middle_hit_id = ''
 
         self.start_barcode_scores = {}
         self.end_barcode_scores = {}
@@ -45,8 +46,6 @@ class NanoporeRead(object):
         self.second_best_start_barcode = ('none', 0.0)
         self.second_best_end_barcode = ('none', 0.0)
         self.barcode_call = 'none'
-        self.barcode_info = 'none'
-
         self.albacore_barcode_call = None
 
     def get_name(self, barcode_labels=False):
@@ -54,8 +53,11 @@ class NanoporeRead(object):
         if barcode_labels:
             start_name, start_id = self.best_start_barcode
             end_name, end_id = self.best_end_barcode
-            new_stuff = " barcode={} start_name={} start_id={} end_name={} end_id={}".format(self.barcode_call, start_name, start_id, end_name, end_id)
-            return self.name + new_stuff
+            bcode_info = " barcode={} start_name={} start_id={} end_name={} end_id={}".format(self.barcode_call, start_name, start_id, end_name, end_id)
+            if self.middle_hit_id != '':
+                return self.name + bcode_info + " middle=" + self.middle_hit_id
+            else:
+                return self.name + bcode_info + " middle=none middle_id=none"
         return self.name
 
     def get_seq_with_start_end_adapters_trimmed(self):
@@ -222,6 +224,7 @@ class NanoporeRead(object):
                     self.middle_hit_str += '  ' + adapter_name + ' (read coords: ' + \
                                            str(read_start) + '-' + str(read_end) + ', ' + \
                                            'identity: ' + '%.1f' % full_score + '%)\n'
+                    self.middle_hit_id += "{} middle_id={}".format(adapter_name, full_score)                         
                     name_tokens = (self.name).split(' ')
                     name = name_tokens[0]
                     start_time = name_tokens[5].lstrip('start_time=')
