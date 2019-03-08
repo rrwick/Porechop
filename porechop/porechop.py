@@ -128,9 +128,9 @@ def get_arguments():
                                help='Reads will have a label added to their header with their barcode')
     barcode_group.add_argument('--extended_labels', action='store_true',
                                help='Reads will have an extended label added to their header with the '
-                                    'barcode call (if any) the best start/ end barcode hit and their '
+                                    'barcode_call (if any), the best start/ end barcode hit and their '
                                     'identities, and whether a barcode is found in middle of read. '
-                                    '(Dependant on --barcode_labels).')
+                                    '(Dependent on --barcode_labels).')
     barcode_group.add_argument('--native_barcodes', action='store_true',
                                help='Only attempts to match the 12 native barcodes')
     barcode_group.add_argument('--barcode_threshold', type=float, default=75.0,
