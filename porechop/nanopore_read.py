@@ -36,7 +36,7 @@ class NanoporeRead(object):
         self.middle_adapter_positions = set()
         self.middle_trim_positions = set()
         self.middle_hit_str = ''
-        self.middle_hit_id = ''
+        self.middle_hit_id = []
 
         self.start_barcode_scores = {}
         self.end_barcode_scores = {}
@@ -48,17 +48,33 @@ class NanoporeRead(object):
         self.barcode_call = 'none'
         self.albacore_barcode_call = None
 
-    def get_name(self, barcode_labels=False):
-        # if barcode_labels and self.barcode_call is not None and self.barcode_call != 'none':
+    def get_name(self, barcode_labels=False, extended_labels=False):
         if barcode_labels:
+            if extended_labels:
+                start_name, start_id = self.best_start_barcode
+                end_name, end_id = self.best_end_barcode
+                bcode_info = " barcode={} start_name={} start_id={} end_name={} end_id={}".format(self.barcode_call, start_name, start_id, end_name, end_id)
+                if self.middle_hit_id != []:
+                    best_middle_hit = sorted(self.middle_hit_id, key = lambda x : float(x[1]), reverse=True)[0] 
+                    return self.name + bcode_info + " middle_name=" + best_middle_hit[0] + " middle_id=" + best_middle_hit[1]
+                else:
+                    return self.name + bcode_info + " middle_name=none middle_id=none"
+            else:
+                return self.name + " barcode=" + self.barcode_call
+        return self.name
+
+    def write_to_stats_csv(self,custom_output,barcode_stats_csv=False):
+        if barcode_stats_csv:
+            name_tokens = (self.name).split(' ')
+            name = name_tokens[0]
+            start_time = name_tokens[5].lstrip("start_time=")
             start_name, start_id = self.best_start_barcode
             end_name, end_id = self.best_end_barcode
-            bcode_info = " barcode={} start_name={} start_id={} end_name={} end_id={}".format(self.barcode_call, start_name, start_id, end_name, end_id)
-            if self.middle_hit_id != '':
-                return self.name + bcode_info + " middle=" + self.middle_hit_id
+            if self.middle_hit_id != []:
+                middle_name, middle_id = sorted(self.middle_hit_id, key = lambda x : float(x[1]), reverse=True)[0] 
             else:
-                return self.name + bcode_info + " middle=none middle_id=none"
-        return self.name
+                middle_name, middle_id = ("none","none")
+            custom_output.write("{},{},{},{},{},{},{},{},{}\n".format(name, start_time, self.barcode_call, start_name, start_id, end_name, end_id, middle_name, middle_id))
 
     def get_seq_with_start_end_adapters_trimmed(self):
         if not self.start_trim_amount and not self.end_trim_amount:
@@ -100,7 +116,7 @@ class NanoporeRead(object):
         split_read_parts = [x for x in split_read_parts if len(x[0]) >= min_split_read_size]
         return split_read_parts
 
-    def get_fasta(self, min_split_read_size, discard_middle, untrimmed=False, barcode_labels=False):
+    def get_fasta(self, min_split_read_size, discard_middle, untrimmed=False, barcode_labels=False, extended_labels=False):
         if not self.middle_trim_positions:
             if untrimmed:
                 seq = self.seq
@@ -108,7 +124,7 @@ class NanoporeRead(object):
                 seq = self.get_seq_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
-            return ''.join(['>', self.get_name(barcode_labels), '\n', add_line_breaks_to_sequence(seq, 70)])
+            return ''.join(['>', self.get_name(barcode_labels, extended_labels), '\n', add_line_breaks_to_sequence(seq, 70)])
         elif discard_middle:
             return ''
         else:
@@ -121,7 +137,7 @@ class NanoporeRead(object):
                 fasta_str += ''.join(['>', read_name, '\n', seq])
             return fasta_str
 
-    def get_fastq(self, min_split_read_size, discard_middle, untrimmed=False, barcode_labels=False):
+    def get_fastq(self, min_split_read_size, discard_middle, untrimmed=False, barcode_labels=False, extended_labels=False):
         if not self.middle_trim_positions:
             if untrimmed:
                 seq = self.seq
@@ -131,7 +147,7 @@ class NanoporeRead(object):
                 quals = self.get_quals_with_start_end_adapters_trimmed()
             if not seq:  # Don't return empty sequences
                 return ''
-            return ''.join(['@', self.get_name(barcode_labels), '\n', seq, '\n+\n', quals, '\n'])
+            return ''.join(['@', self.get_name(barcode_labels,extended_labels), '\n', seq, '\n+\n', quals, '\n'])
         elif discard_middle:
             return ''
         else:
@@ -204,7 +220,7 @@ class NanoporeRead(object):
 
     def find_middle_adapters(self, adapters, middle_threshold, extra_middle_trim_good_side,
                              extra_middle_trim_bad_side, scoring_scheme_vals,
-                             start_sequence_names, end_sequence_names,custom_middle_output):
+                             start_sequence_names, end_sequence_names):
         """
         Aligns an adapter sequence to the whole read to find places where the read should be split.
         """
@@ -224,11 +240,7 @@ class NanoporeRead(object):
                     self.middle_hit_str += '  ' + adapter_name + ' (read coords: ' + \
                                            str(read_start) + '-' + str(read_end) + ', ' + \
                                            'identity: ' + '%.1f' % full_score + '%)\n'
-                    self.middle_hit_id += "{} middle_id={}".format(adapter_name, full_score)                         
-                    name_tokens = (self.name).split(' ')
-                    name = name_tokens[0]
-                    start_time = name_tokens[5].lstrip('start_time=')
-                    custom_middle_output.write("{},{},{},{}\n".format(name, start_time, adapter_name, full_score))                            
+                    self.middle_hit_id.append((adapter_name, full_score))                                                
                     trim_start = read_start - extra_middle_trim_good_side
                     if adapter_name in start_sequence_names:
                         trim_start = read_start - extra_middle_trim_bad_side
@@ -302,7 +314,7 @@ class NanoporeRead(object):
                 middle = middle[:-extra_trim_size] + yellow(middle[-extra_trim_size:])
         return formatted_start + middle + formatted_end
 
-    def formatted_start_and_end_seq(self, end_size, extra_trim_size, check_barcodes, custom_output):
+    def formatted_start_and_end_seq(self, end_size, extra_trim_size, check_barcodes):
         read_seq = ''
         if check_barcodes:
             start_name, start_id = self.best_start_barcode
@@ -310,11 +322,6 @@ class NanoporeRead(object):
             read_seq += 'start: ' + start_name + ' (' + '%.1f' % start_id + '%), '
             read_seq += 'end: ' + end_name + ' (' + '%.1f' % end_id + '%), '
             read_seq += 'barcode call: ' + self.barcode_call + '   '
-        name_tokens = (self.name).split(' ')
-        name = name_tokens[0]
-        start_time = name_tokens[5].lstrip("start_time=")
-        # self.barcode_info =  " barcode={} start_name={} start_id={} end_name={} end_id={}".format(self.barcode_call, start_name, start_id, end_name, end_id)
-        custom_output.write("{},{},{},{},{},{},{}\n".format(name, start_time, start_name, start_id, end_name, end_id, self.barcode_call))
         if len(self.seq) <= 2 * end_size:
             read_seq += self.formatted_whole_seq(extra_trim_size)
         else:
