@@ -45,14 +45,17 @@ class NanoporeRead(object):
         self.second_best_start_barcode = ('none', 0.0)
         self.second_best_end_barcode = ('none', 0.0)
         self.barcode_call = 'none'
+        self.barcode_info = 'none'
 
         self.albacore_barcode_call = None
 
     def get_name(self, barcode_labels=False):
         # if barcode_labels and self.barcode_call is not None and self.barcode_call != 'none':
         if barcode_labels:
-            return self.name + " barcode=" + self.barcode_call
-
+            start_name, start_id = self.best_start_barcode
+            end_name, end_id = self.best_end_barcode
+            new_stuff = " barcode={} start_name={} start_id={} end_name={} end_id={}".format(self.barcode_call, start_name, start_id, end_name, end_id)
+            return self.name + new_stuff
         return self.name
 
     def get_seq_with_start_end_adapters_trimmed(self):
@@ -296,13 +299,6 @@ class NanoporeRead(object):
                 middle = middle[:-extra_trim_size] + yellow(middle[-extra_trim_size:])
         return formatted_start + middle + formatted_end
 
-    # def logging_output(self, output_file):
-    #     read_name = self.name
-    #     barcode_call = self.barcode_call
-    #     start_name, start_id = self.best_start_barcode
-    #     end_name, end_id = self.best_end_barcode
-    #     output_file.write("{},{},{},{},{},{}\n".format(read_name,start_name,start_id,end_name,end_id,barcode_call))
-
     def formatted_start_and_end_seq(self, end_size, extra_trim_size, check_barcodes, custom_output):
         read_seq = ''
         if check_barcodes:
@@ -314,6 +310,7 @@ class NanoporeRead(object):
         name_tokens = (self.name).split(' ')
         name = name_tokens[0]
         start_time = name_tokens[5].lstrip("start_time=")
+        # self.barcode_info =  " barcode={} start_name={} start_id={} end_name={} end_id={}".format(self.barcode_call, start_name, start_id, end_name, end_id)
         custom_output.write("{},{},{},{},{},{},{}\n".format(name, start_time, start_name, start_id, end_name, end_id, self.barcode_call))
         if len(self.seq) <= 2 * end_size:
             read_seq += self.formatted_whole_seq(extra_trim_size)
