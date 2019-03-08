@@ -491,7 +491,6 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
             if check_barcodes:
                 read.determine_barcode(
                     barcode_threshold, barcode_diff, require_two_barcodes)
-                # read.logging_output(custom_output)
             if verbosity == 1:
                 output_progress_line(read_num+1, read_count, print_dest)
             elif verbosity == 2:
@@ -509,7 +508,6 @@ def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_
             r.find_end_trim(a, b, c, d, e, f, g, k)
             if check_barcodes:
                 r.determine_barcode(h, i, j)
-                # r.logging_output(custom_output)
             if v == 2:
                 return r.formatted_start_and_end_seq(b, c, g,custom_output)
             if v > 2:
