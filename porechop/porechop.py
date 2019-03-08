@@ -82,9 +82,8 @@ def main():
 
     output_reads(reads, args.format, args.output, read_type, args.verbosity,
                  args.discard_middle, args.min_split_read_size, args.print_dest,
-                 args.barcode_dir, args.barcode_labels, args.input, args.untrimmed, args.threads,
-                 args.discard_unassigned)
-
+                 args.barcode_dir, args.barcode_labels, args.extended_labels, args.input, args.untrimmed, args.threads,
+                 args.discard_unassigned, args.barcode_stats_csv)
 
 def get_arguments():
     """
@@ -103,6 +102,9 @@ def get_arguments():
     main_group.add_argument('-o', '--output',
                             help='Filename for FASTA or FASTQ of trimmed reads (if not set, '
                                  'trimmed reads will be printed to stdout)')
+    main_group.add_argument('--barcode_stats_csv', action='store_true',
+                            help='Option to output a csv file with start/ end/ middle barcode names '
+                                 'and percentage identities for each given read. ')
     main_group.add_argument('--format', choices=['auto', 'fasta', 'fastq', 'fasta.gz', 'fastq.gz'],
                             default='auto',
                             help='Output format for the reads - if auto, the '
@@ -124,6 +126,11 @@ def get_arguments():
                                     '--output)')
     barcode_group.add_argument('--barcode_labels', action='store_true',
                                help='Reads will have a label added to their header with their barcode')
+    barcode_group.add_argument('--extended_labels', action='store_true',
+                               help='Reads will have an extended label added to their header with the '
+                                    'barcode_call (if any), the best start/ end barcode hit and their '
+                                    'identities, and whether a barcode is found in middle of read. '
+                                    '(Dependent on --barcode_labels).')
     barcode_group.add_argument('--native_barcodes', action='store_true',
                                help='Only attempts to match the 12 native barcodes')
     barcode_group.add_argument('--barcode_threshold', type=float, default=75.0,
@@ -624,8 +631,8 @@ def display_read_middle_trimming_summary(reads, discard_middle, verbosity, print
 
 
 def output_reads(reads, out_format, output, read_type, verbosity, discard_middle,
-                 min_split_size, print_dest, barcode_dir, barcode_labels, input_filename,
-                 untrimmed, threads, discard_unassigned):
+                 min_split_size, print_dest, barcode_dir, barcode_labels, extended_labels, input_filename,
+                 untrimmed, threads, discard_unassigned,barcode_stats_csv=False):
     if verbosity > 0:
         trimmed_or_untrimmed = 'untrimmed' if untrimmed else 'trimmed'
         if barcode_dir is not None:
@@ -639,6 +646,12 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
             destination = 'file'
         print(bold_underline(verb + trimmed_or_untrimmed + ' reads to ' + destination),
               flush=True, file=print_dest)
+
+    if barcode_stats_csv:
+        with open("./barcode_stats.csv","w") as custom_output:
+            custom_output.write("name,start_time,barcode_call,start_name,start_id,end_name,end_id,middle_name,middle_id\n")
+            for read in reads:
+                read.write_to_stats_csv(custom_output,barcode_stats_csv)
 
     if out_format == 'auto':
         if output is None:
@@ -682,10 +695,10 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
                 continue
             if out_format == 'fasta':
                 read_str = read.get_fasta(
-                    min_split_size, discard_middle, untrimmed, barcode_labels)
+                    min_split_size, discard_middle, untrimmed, barcode_labels, extended_labels)
             else:
                 read_str = read.get_fastq(
-                    min_split_size, discard_middle, untrimmed, barcode_labels)
+                    min_split_size, discard_middle, untrimmed, barcode_labels, extended_labels)
             if not read_str:
                 continue
             if barcode_name not in barcode_files:
@@ -731,8 +744,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
     # Output to all reads to stdout.
     elif output is None:
         for read in reads:
-            read_str = read.get_fasta(min_split_size, discard_middle, barcode_labels=barcode_labels) if out_format == 'fasta' \
-                else read.get_fastq(min_split_size, discard_middle, barcode_labels=barcode_labels)
+            read_str = read.get_fasta(min_split_size, discard_middle, barcode_labels=barcode_labels, extended_labels=extended_labels) if out_format == 'fasta' \
+                else read.get_fastq(min_split_size, discard_middle, barcode_labels=barcode_labels, extended_labels=extended_labels)
             print(read_str, end='')
         if verbosity > 0:
             print('Done', flush=True, file=print_dest)
@@ -745,8 +758,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
             out_filename = output
         with open(out_filename, 'wt') as out:
             for read in reads:
-                read_str = read.get_fasta(min_split_size, discard_middle, barcode_labels=barcode_labels) if out_format == 'fasta' \
-                    else read.get_fastq(min_split_size, discard_middle, barcode_labels=barcode_labels)
+                read_str = read.get_fasta(min_split_size, discard_middle, barcode_labels=barcode_labels, extended_labels=extended_labels) if out_format == 'fasta' \
+                    else read.get_fastq(min_split_size, discard_middle, barcode_labels=barcode_labels, extended_labels=extended_labels)
                 out.write(read_str)
         if gzipped_out:
             subprocess.check_output(gzip_command + ' -c ' + out_filename + ' > ' + output,
