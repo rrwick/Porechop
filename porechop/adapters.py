@@ -25,6 +25,7 @@ class Adapter(object):
             self.start_sequence = both_ends_sequence
             self.end_sequence = both_ends_sequence
         self.best_start_score, self.best_end_score = 0.0, 0.0
+        self.sum_start_scores, self.sum_end_scores = 0.0, 0.0
 
     def best_start_or_end_score(self):
         return max(self.best_start_score, self.best_end_score)

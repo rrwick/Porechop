@@ -338,13 +338,13 @@ def choose_barcoding_kit(adapter_sets, verbosity, print_dest):
     for adapter_set in adapter_sets:
         if 'barcode' in adapter_set.name.lower():
             if '(forward)' in adapter_set.name.lower():
-                forward_start_or_end += adapter_set.best_start_or_end_score()
-                forward_start_and_end += adapter_set.best_start_score
-                forward_start_and_end += adapter_set.best_end_score
+                forward_start_or_end += max(adapter_set.sum_start_scores, adapter_set.sum_end_scores)
+                forward_start_and_end += adapter_set.sum_start_scores
+                forward_start_and_end += adapter_set.sum_end_scores
             elif '(reverse)' in adapter_set.name.lower():
-                reverse_start_or_end += adapter_set.best_start_or_end_score()
-                reverse_start_and_end += adapter_set.best_start_score
-                reverse_start_and_end += adapter_set.best_end_score
+                reverse_start_or_end += max(adapter_set.sum_start_scores, adapter_set.sum_end_scores)
+                reverse_start_and_end += adapter_set.sum_start_scores
+                reverse_start_and_end += adapter_set.sum_end_scores
 
     if forward_start_or_end == 0 and reverse_start_or_end == 0:
         sys.exit('Error: no barcodes were found, so Porechop cannot perform barcode demultiplexing')

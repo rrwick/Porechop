@@ -157,11 +157,13 @@ class NanoporeRead(object):
             score, _, _, _ = align_adapter(read_seq_start, adapter_set.start_sequence[1],
                                            scoring_scheme_vals)
             adapter_set.best_start_score = max(adapter_set.best_start_score, score)
+            adapter_set.sum_start_scores += score
         if adapter_set.end_sequence:
             read_seq_end = self.seq[-end_size:]
             score, _, _, _ = align_adapter(read_seq_end, adapter_set.end_sequence[1],
                                            scoring_scheme_vals)
             adapter_set.best_end_score = max(adapter_set.best_end_score, score)
+            adapter_set.sum_end_scores += score
 
     def find_start_trim(self, adapters, end_size, extra_trim_size, end_threshold,
                         scoring_scheme_vals, min_trim_size, check_barcodes, forward_or_reverse):
