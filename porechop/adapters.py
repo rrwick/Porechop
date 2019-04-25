@@ -1,10 +1,8 @@
 """
 Copyright 2017 Ryan Wick (rrwick@gmail.com)
 https://github.com/rrwick/Porechop
-
 This module contains the class and sequences for known adapters used in Oxford Nanopore library
 preparation kits.
-
 This file is part of Porechop. Porechop is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by the Free Software Foundation,
 either version 3 of the License, or (at your option) any later version. Porechop is distributed in
@@ -509,3 +507,29 @@ def make_full_rapid_barcode_adapter(barcode_num):
 
     return Adapter('Rapid barcoding ' + str(barcode_num) + ' (full sequence)',
                    start_sequence=('RB' + '%02d' % barcode_num + '_full', start_full_seq))
+
+def load_custom_barcodes(custom_barcode_file):
+    c = 0
+    print("Loading custom barcodes from file {}...".format(custom_barcode_file))
+    CUSTOM_BARCODES=[]
+    start_name=''
+    end_name=''
+    name=''
+    custom_barcodes = str(custom_barcode_file)
+    with open(custom_barcodes,"r") as f:
+        for l in f:
+            if not l.startswith("Primer Name"):
+                c +=1
+                tokens=l.split(',')
+                if c%2!=0:
+                    name='Barcode {} (forward)'.format(tokens[0].rstrip('_LEFT'))
+                    start_name=tokens[0]
+                    start_seq=tokens[1]
+                else:
+                    if name=='Barcode {} (forward)'.format(tokens[0].rstrip('_RIGHT')):
+                        end_name=tokens[0]
+                        end_seq=tokens[1]
+                        print(name, start_name, end_name, start_seq, end_seq)
+                        CUSTOM_BARCODES.append(Adapter(name, start_sequence=(start_name, start_seq), end_sequence=(end_name, end_seq)))
+    return CUSTOM_BARCODES
+
