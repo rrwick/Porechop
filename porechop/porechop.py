@@ -24,7 +24,7 @@ import re
 from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
-from .adapters import NATIVE_BARCODES, ALL_ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter, load_custom_barcodes
+from .adapters import NATIVE_BARCODES, ALL_ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter, load_primers, load_custom_barcodes
 from .nanopore_read import NanoporeRead
 from .version import __version__
 
@@ -44,6 +44,11 @@ def main():
     if args.custom_barcodes:
         CUSTOM_BARCODES = load_custom_barcodes(args.custom_barcodes)
         search_adapters = CUSTOM_BARCODES
+
+    if args.custom_primers:
+        CUSTOM_BARCODES = load_primers(args.custom_primers)
+        search_adapters = CUSTOM_BARCODES
+
     matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
                                                args.scoring_scheme_vals, args.print_dest,
                                                args.adapter_threshold, args.threads, search_adapters)
@@ -138,6 +143,8 @@ def get_arguments():
                                help='Only attempts to match the 12 native barcodes')
     barcode_group.add_argument('--custom_barcodes',
                                help='CSV file containing custom barcode sequences')
+    barcode_group.add_argument('--custom_primers',
+                               help='CSV file containing custom primer sequences')
     barcode_group.add_argument('--barcode_threshold', type=float, default=75.0,
                                help='A read must have at least this percent identity to a barcode '
                                     'to be binned')
