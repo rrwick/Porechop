@@ -23,8 +23,9 @@ import shutil
 import re
 from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
+
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
-from .adapters import NATIVE_BARCODES, ALL_ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter, load_primers, load_custom_barcodes
+from .adapters import NATIVE_BARCODES, NATIVE_BARCODES_24, ALL_ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter, load_primers, load_custom_barcodes
 from .nanopore_read import NanoporeRead
 from .version import __version__
 
@@ -37,9 +38,9 @@ def main():
     search_adapters = ALL_ADAPTERS
 
     if args.native_barcodes:
-        # construct a smaller set of search adapters with only the 12 barcodes to speed up the initial step
+        # construct a smaller set of search adapters with only the 24 barcodes to speed up the initial step
         # search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name and '(forward)' not in a.name]
-        search_adapters = NATIVE_BARCODES
+        search_adapters = NATIVE_BARCODES_24 # assume extended set of 24 native barcodes
 
     if args.custom_barcodes:
         CUSTOM_BARCODES = load_custom_barcodes(args.custom_barcodes)
@@ -49,6 +50,7 @@ def main():
         CUSTOM_BARCODES = load_primers(args.custom_primers)
         search_adapters = CUSTOM_BARCODES
 
+    # TODO - skip this step and just specify exactly which barcodes are being used...
     matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
                                                args.scoring_scheme_vals, args.print_dest,
                                                args.adapter_threshold, args.threads, search_adapters)
@@ -140,7 +142,7 @@ def get_arguments():
                                     'identities, and whether a barcode is found in middle of read. '
                                     '(Dependent on --barcode_labels).')
     barcode_group.add_argument('--native_barcodes', action='store_true',
-                               help='Only attempts to match the 12 native barcodes')
+                               help='Only attempts to match the 24 native barcodes')
     barcode_group.add_argument('--custom_barcodes',
                                help='CSV file containing custom barcode sequences')
     barcode_group.add_argument('--custom_primers',
