@@ -107,46 +107,6 @@ NATIVE_BARCODES = [
             end_sequence=('BC11', 'GTTTCATCTATCGGAGGGAATGGA')),
     Adapter('Barcode 12 (reverse)',
             start_sequence=('BC12_rev', 'TCCGATTCTGCTTCTTTCTACCTG'),
-            end_sequence=('BC12', 'CAGGTAGAAAGAAGCAGAATCGGA'))]
-
-NATIVE_BARCODES_24 = [
-    # Some barcoding kits (like the native barcodes) use the rev comp barcode at the start
-    # of the read and the forward barcode at the end of the read.
-    Adapter('Barcode 1 (reverse)',
-            start_sequence=('BC01_rev', 'CACAAAGACACCGACAACTTTCTT'),
-            end_sequence=('BC01', 'AAGAAAGTTGTCGGTGTCTTTGTG')),
-    Adapter('Barcode 2 (reverse)',
-            start_sequence=('BC02_rev', 'ACAGACGACTACAAACGGAATCGA'),
-            end_sequence=('BC02', 'TCGATTCCGTTTGTAGTCGTCTGT')),
-    Adapter('Barcode 3 (reverse)',
-            start_sequence=('BC03_rev', 'CCTGGTAACTGGGACACAAGACTC'),
-            end_sequence=('BC03', 'GAGTCTTGTGTCCCAGTTACCAGG')),
-    Adapter('Barcode 4 (reverse)',
-            start_sequence=('BC04_rev', 'TAGGGAAACACGATAGAATCCGAA'),
-            end_sequence=('BC04', 'TTCGGATTCTATCGTGTTTCCCTA')),
-    Adapter('Barcode 5 (reverse)',
-            start_sequence=('BC05_rev', 'AAGGTTACACAAACCCTGGACAAG'),
-            end_sequence=('BC05', 'CTTGTCCAGGGTTTGTGTAACCTT')),
-    Adapter('Barcode 6 (reverse)',
-            start_sequence=('BC06_rev', 'GACTACTTTCTGCCTTTGCGAGAA'),
-            end_sequence=('BC06', 'TTCTCGCAAAGGCAGAAAGTAGTC')),
-    Adapter('Barcode 7 (reverse)',
-            start_sequence=('BC07_rev', 'AAGGATTCATTCCCACGGTAACAC'),
-            end_sequence=('BC07', 'GTGTTACCGTGGGAATGAATCCTT')),
-    Adapter('Barcode 8 (reverse)',
-            start_sequence=('BC08_rev', 'ACGTAACTTGGTTTGTTCCCTGAA'),
-            end_sequence=('BC08', 'TTCAGGGAACAAACCAAGTTACGT')),
-    Adapter('Barcode 9 (reverse)',
-            start_sequence=('BC09_rev', 'AACCAAGACTCGCTGTGCCTAGTT'),
-            end_sequence=('BC09', 'AACTAGGCACAGCGAGTCTTGGTT')),
-    Adapter('Barcode 10 (reverse)',
-            start_sequence=('BC10_rev', 'GAGAGGACAAAGGTTTCAACGCTT'),
-            end_sequence=('BC10', 'AAGCGTTGAAACCTTTGTCCTCTC')),
-    Adapter('Barcode 11 (reverse)',
-            start_sequence=('BC11_rev', 'TCCATTCCCTCCGATAGATGAAAC'),
-            end_sequence=('BC11', 'GTTTCATCTATCGGAGGGAATGGA')),
-    Adapter('Barcode 12 (reverse)',
-            start_sequence=('BC12_rev', 'TCCGATTCTGCTTCTTTCTACCTG'),
             end_sequence=('BC12', 'CAGGTAGAAAGAAGCAGAATCGGA')),
 
     Adapter('Barcode 13 (reverse)',
@@ -229,46 +189,6 @@ ALL_ADAPTERS = [Adapter('SQK-NSK007',
                         end_sequence=  ('1D2_part_2_end',   'CACCCAAGCAGACGCCAGCAATACGTAACT')),
                 # The middle part of the provided sequences is less common, so I've left it out of the
                 # adapter sequences here.
-
-
-                # Some barcoding kits (like the native barcodes) use the rev comp barcode at the start
-                # of the read and the forward barcode at the end of the read.
-                Adapter('Barcode 1 (reverse)',
-                        start_sequence=('BC01_rev', 'CACAAAGACACCGACAACTTTCTT'),
-                        end_sequence=('BC01', 'AAGAAAGTTGTCGGTGTCTTTGTG')),
-                Adapter('Barcode 2 (reverse)',
-                        start_sequence=('BC02_rev', 'ACAGACGACTACAAACGGAATCGA'),
-                        end_sequence=('BC02', 'TCGATTCCGTTTGTAGTCGTCTGT')),
-                Adapter('Barcode 3 (reverse)',
-                        start_sequence=('BC03_rev', 'CCTGGTAACTGGGACACAAGACTC'),
-                        end_sequence=('BC03', 'GAGTCTTGTGTCCCAGTTACCAGG')),
-                Adapter('Barcode 4 (reverse)',
-                        start_sequence=('BC04_rev', 'TAGGGAAACACGATAGAATCCGAA'),
-                        end_sequence=('BC04', 'TTCGGATTCTATCGTGTTTCCCTA')),
-                Adapter('Barcode 5 (reverse)',
-                        start_sequence=('BC05_rev', 'AAGGTTACACAAACCCTGGACAAG'),
-                        end_sequence=('BC05', 'CTTGTCCAGGGTTTGTGTAACCTT')),
-                Adapter('Barcode 6 (reverse)',
-                        start_sequence=('BC06_rev', 'GACTACTTTCTGCCTTTGCGAGAA'),
-                        end_sequence=('BC06', 'TTCTCGCAAAGGCAGAAAGTAGTC')),
-                Adapter('Barcode 7 (reverse)',
-                        start_sequence=('BC07_rev', 'AAGGATTCATTCCCACGGTAACAC'),
-                        end_sequence=('BC07', 'GTGTTACCGTGGGAATGAATCCTT')),
-                Adapter('Barcode 8 (reverse)',
-                        start_sequence=('BC08_rev', 'ACGTAACTTGGTTTGTTCCCTGAA'),
-                        end_sequence=('BC08', 'TTCAGGGAACAAACCAAGTTACGT')),
-                Adapter('Barcode 9 (reverse)',
-                        start_sequence=('BC09_rev', 'AACCAAGACTCGCTGTGCCTAGTT'),
-                        end_sequence=('BC09', 'AACTAGGCACAGCGAGTCTTGGTT')),
-                Adapter('Barcode 10 (reverse)',
-                        start_sequence=('BC10_rev', 'GAGAGGACAAAGGTTTCAACGCTT'),
-                        end_sequence=('BC10', 'AAGCGTTGAAACCTTTGTCCTCTC')),
-                Adapter('Barcode 11 (reverse)',
-                        start_sequence=('BC11_rev', 'TCCATTCCCTCCGATAGATGAAAC'),
-                        end_sequence=('BC11', 'GTTTCATCTATCGGAGGGAATGGA')),
-                Adapter('Barcode 12 (reverse)',
-                        start_sequence=('BC12_rev', 'TCCGATTCTGCTTCTTTCTACCTG'),
-                        end_sequence=('BC12', 'CAGGTAGAAAGAAGCAGAATCGGA')),
 
                 # Other barcoding kits (like the PCR and rapid barcodes) use the forward barcode at the
                 # start of the read and the rev comp barcode at the end of the read.
@@ -559,7 +479,8 @@ ALL_ADAPTERS = [Adapter('SQK-NSK007',
                         end_sequence=('BC95_rev', 'AAGTCCATTCTTCTTCCAGACAGG')),
                 Adapter('Barcode 96 (forward)',
                         start_sequence=('BC96', 'CTGAACGGTCATAGAGTCCACCAT'),
-                        end_sequence=('BC96_rev', 'ATGGTGGACTCTATGACCGTTCAG'))]
+                        end_sequence=('BC96_rev', 'ATGGTGGACTCTATGACCGTTCAG'))]\
+    .append(NATIVE_BARCODES) # also append the full set of native barcodes to this set
 
 
 def make_full_native_barcode_adapter(barcode_num):

@@ -25,7 +25,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
-from .adapters import NATIVE_BARCODES, NATIVE_BARCODES_24, ALL_ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter, load_primers, load_custom_barcodes
+from .adapters import NATIVE_BARCODES, ALL_ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter, load_primers, load_custom_barcodes
 from .nanopore_read import NanoporeRead
 from .version import __version__
 
@@ -40,7 +40,7 @@ def main():
     if args.native_barcodes:
         # construct a smaller set of search adapters with only the 24 barcodes to speed up the initial step
         # search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name and '(forward)' not in a.name]
-        search_adapters = NATIVE_BARCODES_24 # assume extended set of 24 native barcodes
+        search_adapters = NATIVE_BARCODES # assume extended set of 24 native barcodes
 
     if args.custom_barcodes:
         CUSTOM_BARCODES = load_custom_barcodes(args.custom_barcodes)
