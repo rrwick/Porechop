@@ -109,7 +109,7 @@ def main():
                 find_adapters_in_read_middles(reads, matching_sets, args.verbosity,
                                               args.middle_threshold, args.extra_middle_trim_good_side,
                                               args.extra_middle_trim_bad_side, args.scoring_scheme_vals,
-                                              args.print_dest, args.threads, args.discard_middle)
+                                              args.print_dest, args.threads, args.discard_middle, args.discard_unassigned)
                 display_read_middle_trimming_summary(reads, args.discard_middle, args.verbosity,
                                                      args.print_dest)
         elif args.verbosity > 0:
