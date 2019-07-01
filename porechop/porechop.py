@@ -32,68 +32,103 @@ from .version import __version__
 
 def main():
     args = get_arguments()
-    reads, check_reads, read_type = load_reads(args.input, args.verbosity, args.print_dest,
-                                               args.check_reads)
 
-    search_adapters = ALL_ADAPTERS
+    check_read_count = args.check_reads
+
+    search_adapters = None
+    matching_sets = None
+    forward_or_reverse_barcodes = None
+
+    reads, check_reads, read_type = load_reads(args.input, args.verbosity, args.print_dest, check_read_count)
 
     if args.native_barcodes:
         # construct a smaller set of search adapters with only the 24 barcodes to speed up the initial step
-        # search_adapters = [a for a in ADAPTERS if '(full sequence)' not in a.name and '(forward)' not in a.name]
-        search_adapters = NATIVE_BARCODES # assume extended set of 24 native barcodes
+        barcodes = NATIVE_BARCODES
+        # barcode_adapters = []
+        # for i in range(1, 25):
+        #     barcode_adapters.append(make_full_native_barcode_adapter(i))
+        if args.verbosity > 0:
+            print(bold_underline('Using native barcodes'), flush=True, file=args.print_dest)
 
-    if args.custom_barcodes:
-        CUSTOM_BARCODES = load_custom_barcodes(args.custom_barcodes)
-        search_adapters = CUSTOM_BARCODES
-
-    if args.custom_primers:
-        CUSTOM_BARCODES = load_primers(args.custom_primers)
-        search_adapters = CUSTOM_BARCODES
-
-    # TODO - skip this step and just specify exactly which barcodes are being used...
-    matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
-                                               args.scoring_scheme_vals, args.print_dest,
-                                               args.adapter_threshold, args.threads, search_adapters)
-    matching_sets = exclude_end_adapters_for_rapid(matching_sets)
-    matching_sets = fix_up_1d2_sets(matching_sets)
-    display_adapter_set_results(search_adapters, matching_sets, args.verbosity, args.print_dest)
-    matching_sets = add_full_barcode_adapter_sets(matching_sets)
-
-    if args.barcode_dir or args.barcode_labels:
-        forward_or_reverse_barcodes = choose_barcoding_kit(matching_sets, args.verbosity,
-                                                           args.print_dest)
-    else:
-        forward_or_reverse_barcodes = None
-    if args.verbosity > 0:
-        print('\n', file=args.print_dest)
-
-    if matching_sets:
-        check_barcodes = (
-            args.barcode_dir is not None or args.barcode_labels is not False)
-        find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
+        find_adapters_at_read_ends(reads, barcodes, args.verbosity, args.end_size,
                                    args.extra_end_trim, args.end_threshold,
                                    args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
-                                   args.threads, check_barcodes, args.barcode_threshold,
+                                   args.threads, True, args.barcode_threshold,
                                    args.barcode_diff, args.require_two_barcodes,
-                                   forward_or_reverse_barcodes)
+                                   'reverse')
+
         display_read_end_trimming_summary(
             reads, args.verbosity, args.print_dest)
 
         if not args.no_split:
-            find_adapters_in_read_middles(reads, matching_sets, args.verbosity,
+            find_adapters_in_read_middles(reads, barcodes, args.verbosity,
                                           args.middle_threshold, args.extra_middle_trim_good_side,
                                           args.extra_middle_trim_bad_side, args.scoring_scheme_vals,
-                                          args.print_dest, args.threads, args.discard_middle)
+                                          args.print_dest, args.threads, args.discard_middle, args.discard_unassigned)
             display_read_middle_trimming_summary(reads, args.discard_middle, args.verbosity,
                                                  args.print_dest)
-    elif args.verbosity > 0:
-        print('No adapters found - output reads are unchanged from input reads\n',
-              file=args.print_dest)
 
-    output_reads(reads, args.format, args.output, read_type, args.verbosity,
+    else:
+        if args.custom_barcodes:
+            matching_sets = load_custom_barcodes(args.custom_barcodes)
+            if args.verbosity > 0:
+                print(bold_underline('Using custom barcodes'), flush=True, file=args.print_dest)
+
+        if not matching_sets:
+            if not search_adapters:
+                search_adapters = ALL_ADAPTERS
+
+            matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
+                                                       args.scoring_scheme_vals, args.print_dest,
+                                                       args.adapter_threshold, args.threads, search_adapters)
+            matching_sets = exclude_end_adapters_for_rapid(matching_sets)
+            matching_sets = fix_up_1d2_sets(matching_sets)
+            matching_sets = add_full_barcode_adapter_sets(matching_sets)
+            display_adapter_set_results(search_adapters, matching_sets, args.verbosity, args.print_dest)
+
+            if args.barcode_dir or args.barcode_labels:
+                forward_or_reverse_barcodes = choose_barcoding_kit(matching_sets, args.verbosity,
+                                                                   args.print_dest)
+
+        if args.verbosity > 0:
+            print('\n', file=args.print_dest)
+
+        if matching_sets:
+            check_barcodes = (args.barcode_dir is not None or args.barcode_labels is not False)
+
+            find_adapters_at_read_ends(reads, matching_sets, args.verbosity, args.end_size,
+                                       args.extra_end_trim, args.end_threshold,
+                                       args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
+                                       args.threads, check_barcodes, args.barcode_threshold,
+                                       args.barcode_diff, args.require_two_barcodes,
+                                       forward_or_reverse_barcodes)
+            display_read_end_trimming_summary(
+                reads, args.verbosity, args.print_dest)
+
+            if not args.no_split:
+                find_adapters_in_read_middles(reads, matching_sets, args.verbosity,
+                                              args.middle_threshold, args.extra_middle_trim_good_side,
+                                              args.extra_middle_trim_bad_side, args.scoring_scheme_vals,
+                                              args.print_dest, args.threads, args.discard_middle)
+                display_read_middle_trimming_summary(reads, args.discard_middle, args.verbosity,
+                                                     args.print_dest)
+        elif args.verbosity > 0:
+            print('No adapters found - output reads are unchanged from input reads\n',
+                  file=args.print_dest)
+
+    counts = output_reads(reads, args.format, args.output, read_type, args.verbosity,
                  args.discard_middle, args.min_split_read_size, args.print_dest,
                  args.barcode_dir, args.barcode_labels, args.extended_labels, args.input, args.untrimmed, args.threads,
                  args.discard_unassigned, args.barcode_stats_csv)
+
+    if args.native_barcodes and args.verbosity > 0:
+        print(bold_underline('\nBarcodes called'), flush=True, file=args.print_dest)
+        barcode_names = []
+        for barcode_name in counts:
+            barcode_names.append(barcode_name)
+        barcode_names.sort()
+        for barcode_name in barcode_names:
+            print(barcode_name + ": " + str(counts[barcode_name]), flush=True, file=args.print_dest)
 
 def get_arguments():
     """
@@ -145,8 +180,6 @@ def get_arguments():
                                help='Only attempts to match the 24 native barcodes')
     barcode_group.add_argument('--custom_barcodes',
                                help='CSV file containing custom barcode sequences')
-    barcode_group.add_argument('--custom_primers',
-                               help='CSV file containing custom primer sequences')
     barcode_group.add_argument('--barcode_threshold', type=float, default=75.0,
                                help='A read must have at least this percent identity to a barcode '
                                     'to be binned')
@@ -327,18 +360,9 @@ def find_matching_adapter_sets(check_reads, verbosity, end_size, scoring_scheme_
     """
     read_count = len(check_reads)
     if verbosity > 0:
-        if search_adapters == NATIVE_BARCODES:
-            print(bold_underline('Looking for native barcodes'),
-                flush=True, file=print_dest)
-        else:        
-            print(bold_underline('Looking for known adapter sets'),
-                flush=True, file=print_dest)
+        print(bold_underline('Looking for known adapter sets'), flush=True, file=print_dest)
         output_progress_line(0, read_count, print_dest)
 
-    # If no set of search adapters are provided then use them all
-    if search_adapters is None:
-        search_adapters = [
-            a for a in ALL_ADAPTERS if '(full sequence)' not in a.name]
     search_adapter_count = len(search_adapters)
 
     # If single-threaded, do the work in a simple loop.
@@ -473,7 +497,6 @@ def add_full_barcode_adapter_sets(matching_sets):
 
     return matching_sets
 
-
 def find_adapters_at_read_ends(reads, matching_sets, verbosity, end_size, extra_trim_size,
                                end_threshold, scoring_scheme_vals, print_dest, min_trim_size,
                                threads, check_barcodes, barcode_threshold, barcode_diff,
@@ -571,7 +594,7 @@ def display_read_end_trimming_summary(reads, verbosity, print_dest):
 
 def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_threshold,
                                   extra_trim_good_side, extra_trim_bad_side, scoring_scheme_vals,
-                                  print_dest, threads, discard_middle):
+                                  print_dest, threads, discard_middle, discard_unassigned):
     if verbosity > 0:
         verb = 'Discarding' if discard_middle else 'Splitting'
         print(bold_underline(verb + ' reads containing middle adapters'),
@@ -598,6 +621,9 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
     # If single-threaded, do the work in a simple loop.
     if threads == 1:
         for read_num, read in enumerate(reads):
+            if discard_unassigned and read.barcode_call is "none":
+                # if we are discarding unassigned barcodes then there is no point in checking for middle adapters
+                continue
             read.find_middle_adapters(adapters, middle_threshold, extra_trim_good_side,
                                       extra_trim_bad_side, scoring_scheme_vals,
                                       start_sequence_names, end_sequence_names)
@@ -616,6 +642,9 @@ def find_adapters_in_read_middles(reads, matching_sets, verbosity, middle_thresh
         with ThreadPool(threads) as pool:
             arg_list = []
             for read in reads:
+                if discard_unassigned and read.barcode_call is "none":
+                    # if we are discarding unassigned barcodes then there is no point in checking for middle adapters
+                    continue
                 arg_list.append((read, adapters, middle_threshold, extra_trim_good_side,
                                  extra_trim_bad_side, scoring_scheme_vals, start_sequence_names,
                                  end_sequence_names, verbosity))
@@ -646,7 +675,7 @@ def display_read_middle_trimming_summary(reads, discard_middle, verbosity, print
 
 def output_reads(reads, out_format, output, read_type, verbosity, discard_middle,
                  min_split_size, print_dest, barcode_dir, barcode_labels, extended_labels, input_filename,
-                 untrimmed, threads, discard_unassigned,barcode_stats_csv=False):
+                 untrimmed, threads, discard_unassigned, barcode_stats_csv):
     if verbosity > 0:
         trimmed_or_untrimmed = 'untrimmed' if untrimmed else 'trimmed'
         if barcode_dir is not None:
@@ -660,6 +689,12 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
             destination = 'file'
         print(bold_underline(verb + trimmed_or_untrimmed + ' reads to ' + destination),
               flush=True, file=print_dest)
+
+    counts = {}
+    for read in reads:
+        if not read.barcode_call in counts:
+            counts[read.barcode_call] = 0
+        counts[read.barcode_call] += 1
 
     if barcode_stats_csv:
         with open("./barcode_stats.csv","w") as custom_output:
@@ -758,6 +793,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
     # Output to all reads to stdout.
     elif output is None:
         for read in reads:
+            if discard_unassigned and read.barcode_call == 'none':
+                continue
             read_str = read.get_fasta(min_split_size, discard_middle, barcode_labels=barcode_labels, extended_labels=extended_labels) if out_format == 'fasta' \
                 else read.get_fastq(min_split_size, discard_middle, barcode_labels=barcode_labels, extended_labels=extended_labels)
             print(read_str, end='')
@@ -772,6 +809,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
             out_filename = output
         with open(out_filename, 'wt') as out:
             for read in reads:
+                if discard_unassigned and read.barcode_call == 'none':
+                    continue
                 read_str = read.get_fasta(min_split_size, discard_middle, barcode_labels=barcode_labels, extended_labels=extended_labels) if out_format == 'fasta' \
                     else read.get_fastq(min_split_size, discard_middle, barcode_labels=barcode_labels, extended_labels=extended_labels)
                 out.write(read_str)
@@ -784,6 +823,8 @@ def output_reads(reads, out_format, output, read_type, verbosity, discard_middle
 
     if verbosity > 0:
         print('', flush=True, file=print_dest)
+
+    return counts
 
 
 def output_progress_line(completed, total, print_dest, end_newline=False, step=10):
