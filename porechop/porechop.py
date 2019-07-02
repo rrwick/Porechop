@@ -25,7 +25,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
-from .adapters import NATIVE_BARCODES, RAPID_BARCODES, ALL_ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter, load_primers, load_custom_barcodes
+from .adapters import NATIVE_BARCODES, RAPID_BARCODES, OTHER_ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter, load_primers, load_custom_barcodes
 from .nanopore_read import NanoporeRead
 from .version import __version__
 
@@ -83,7 +83,10 @@ def main():
 
         if not matching_sets:
             if not search_adapters:
-                search_adapters = ALL_ADAPTERS
+                # just add all of the adapters
+                search_adapters = NATIVE_BARCODES
+                search_adapters.extend(RAPID_BARCODES)
+                search_adapters.extend(OTHER_ADAPTERS)
 
             matching_sets = find_matching_adapter_sets(check_reads, args.verbosity, args.end_size,
                                                        args.scoring_scheme_vals, args.print_dest,

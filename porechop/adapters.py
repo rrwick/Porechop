@@ -557,8 +557,6 @@ OTHER_ADAPTERS = [
     # adapter sequences here.
     ]
 
-ALL_ADAPTERS = [].extend(NATIVE_BARCODES).extend(RAPID_BARCODES).extend(OTHER_ADAPTERS)
-
 def make_full_native_barcode_adapter(barcode_num):
     barcode = [x for x in NATIVE_BARCODES if x.name == 'Native Barcode ' + str(barcode_num)][0]
     start_barcode_seq = barcode.start_sequence[1]
