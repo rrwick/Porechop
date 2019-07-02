@@ -1,3 +1,27 @@
+This fork of Porechop has been adapted to include Native Barcodes 13-24 and has a number of additional command line options. 
+
+> --native_barcodes
+
+This option specifies that the ONT native barcodes are being used and only looks for those (including the 13-24 extension). Only including these speeds up the barcoding precess considerably when processing small fastq files (by default Porechop looks at the first 10K reads to determine which barcodes are present but redoes this for each file). 
+
+> --discard_middle --discard_unassigned
+
+If both these options are used then it doesn't look for middle adapters for reads that were unassigned a barcode (as it will be throwing these away anyway).
+
+> --barcode_headers
+
+This option writes the barcode calls to the header of the output fastq. 
+
+> --extended_headers
+
+This option also writes the barcode call for both ends of the read and the similarity scores for these matches
+
+> --csv
+
+Writes a CSV file with one row per read giving the barcode call information
+
+
+
 <p align="center"><img src="misc/porechop_logo_knife.png" alt="Porechop" width="600"></p>
 
 Porechop is a tool for finding and removing adapters from [Oxford Nanopore](https://nanoporetech.com/) reads. Adapters on the ends of reads are trimmed off, and when a read has an adapter in its middle, it is treated as chimeric and chopped into separate reads. Porechop performs thorough alignments to effectively find adapters, even at low sequence identity.
