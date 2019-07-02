@@ -25,7 +25,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 from collections import defaultdict
 
 from .misc import load_fasta_or_fastq, print_table, red, bold_underline, MyHelpFormatter, int_to_str
-from .adapters import NATIVE_BARCODES, ALL_ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter, load_primers, load_custom_barcodes
+from .adapters import NATIVE_BARCODES, RAPID_BARCODES, ALL_ADAPTERS, make_full_native_barcode_adapter, make_full_rapid_barcode_adapter, load_primers, load_custom_barcodes
 from .nanopore_read import NanoporeRead
 from .version import __version__
 
@@ -41,14 +41,21 @@ def main():
 
     reads, check_reads, read_type = load_reads(args.input, args.verbosity, args.print_dest, check_read_count)
 
-    if args.native_barcodes:
-        # construct a smaller set of search adapters with only the 24 barcodes to speed up the initial step
-        barcodes = NATIVE_BARCODES
-        # barcode_adapters = []
-        # for i in range(1, 25):
-        #     barcode_adapters.append(make_full_native_barcode_adapter(i))
+    if args.native_barcodes or args.rapid_barcodes:
+        if args.limit_barcodes:
+            print('Limiting barcodes to specific numbers is not implemented yet');
+            
+        if args.native_barcodes:
+            # construct a smaller set of search adapters with only the 24 barcodes to speed up the initial step
+            barcodes = NATIVE_BARCODES
+            # barcode_adapters = []
+            # for i in range(1, 25):
+            #     barcode_adapters.append(make_full_native_barcode_adapter(i))
+        else:
+            barcodes = RAPID_BARCODES
+
         if args.verbosity > 0:
-            print(bold_underline('Using native barcodes'), flush=True, file=args.print_dest)
+            print(bold_underline('Using ' + ('native' if args.native_barcodes else 'rapid') + ' barcodes'), flush=True, file=args.print_dest)
 
         find_adapters_at_read_ends(reads, barcodes, args.verbosity, args.end_size,
                                    args.extra_end_trim, args.end_threshold,
@@ -178,6 +185,10 @@ def get_arguments():
                                     '(Dependent on --barcode_labels).')
     barcode_group.add_argument('--native_barcodes', action='store_true',
                                help='Only attempts to match the 24 native barcodes')
+    barcode_group.add_argument('--rapid_barcodes', action='store_true',
+                               help='Only attempts to match the 96 rapid barcodes')
+    barcode_group.add_argument('--limit_barcodes', action='store_true',
+                               help='Specify a list of barcodes to look for (numbers refer to native or rapid)')
     barcode_group.add_argument('--custom_barcodes',
                                help='CSV file containing custom barcode sequences')
     barcode_group.add_argument('--barcode_threshold', type=float, default=75.0,
