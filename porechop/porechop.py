@@ -48,13 +48,15 @@ def main():
         if args.native_barcodes:
             # construct a smaller set of search adapters with only the 24 barcodes to speed up the initial step
             barcodes = NATIVE_BARCODES
+            forward_or_reverse_barcodes = 'reverse'
             # barcode_adapters = []
             # for i in range(1, 25):
             #     barcode_adapters.append(make_full_native_barcode_adapter(i))
         else:
             barcodes = RAPID_BARCODES
+            forward_or_reverse_barcodes = 'forward'
 
-        if args.verbosity > 0:
+    if args.verbosity > 0:
             print(bold_underline('Using ' + ('native' if args.native_barcodes else 'rapid') + ' barcodes'), flush=True, file=args.print_dest)
 
         find_adapters_at_read_ends(reads, barcodes, args.verbosity, args.end_size,
@@ -62,7 +64,7 @@ def main():
                                    args.scoring_scheme_vals, args.print_dest, args.min_trim_size,
                                    args.threads, True, args.barcode_threshold,
                                    args.barcode_diff, args.require_two_barcodes,
-                                   'reverse')
+                                   forward_or_reverse_barcodes)
 
         display_read_end_trimming_summary(
             reads, args.verbosity, args.print_dest)
@@ -131,7 +133,7 @@ def main():
                  args.barcode_dir, args.barcode_labels, args.extended_labels, args.input, args.untrimmed, args.threads,
                  args.discard_unassigned, args.barcode_stats_csv)
 
-    if args.native_barcodes and args.verbosity > 0:
+    if (args.native_barcodes or args.rapid_barcodes) and args.verbosity > 0:
         print(bold_underline('\nBarcodes called'), flush=True, file=args.print_dest)
         barcode_names = []
         for barcode_name in counts:
