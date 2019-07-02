@@ -43,7 +43,7 @@ def main():
 
     if args.native_barcodes or args.rapid_barcodes:
         if args.limit_barcodes:
-            print('Limiting barcodes to specific numbers is not implemented yet');
+            print('Limiting barcodes to specific numbers is not implemented yet')
             
         if args.native_barcodes:
             # construct a smaller set of search adapters with only the 24 barcodes to speed up the initial step
@@ -56,7 +56,7 @@ def main():
             barcodes = RAPID_BARCODES
             forward_or_reverse_barcodes = 'forward'
 
-    if args.verbosity > 0:
+        if args.verbosity > 0:
             print(bold_underline('Using ' + ('native' if args.native_barcodes else 'rapid') + ' barcodes'), flush=True, file=args.print_dest)
 
         find_adapters_at_read_ends(reads, barcodes, args.verbosity, args.end_size,
