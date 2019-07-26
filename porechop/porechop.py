@@ -60,11 +60,14 @@ def main():
                 print('Limiting barcodes to :', args.limit_barcodes_to)
 
         barcodes = []
-        for barcode_number in args.limit_barcodes_to:
-            if (barcode_number < 1 or barcode_number > len(barcodes_set)):
-                sys.exit("Barcode number out of range of chosen set (1-24 for native, 1-96 for rapid)")
+        if args.limit_barcodes_to:
+            for barcode_number in args.limit_barcodes_to:
+                if (barcode_number < 1 or barcode_number > len(barcodes_set)):
+                    sys.exit("Barcode number out of range of chosen set (1-24 for native, 1-96 for rapid)")
 
-            barcodes.append(barcodes_set[barcode_number - 1])
+                barcodes.append(barcodes_set[barcode_number - 1])
+        else:
+            barcodes.extend(barcodes_set)
 
         find_adapters_at_read_ends(reads, barcodes, args.verbosity, args.end_size,
                                    args.extra_end_trim, args.end_threshold,
@@ -202,7 +205,7 @@ def get_arguments():
                                help='Only attempts to match the 24 native barcodes')
     barcode_group.add_argument('--rapid_barcodes', action='store_true',
                                help='Only attempts to match the 96 rapid barcodes')
-    barcode_group.add_argument('--limit_barcodes_to', nargs='+', type=int,
+    barcode_group.add_argument('--limit_barcodes_to', nargs='+', type=int, required=False,
                                help='Specify a list of barcodes to look for (numbers refer to native or rapid)')
     barcode_group.add_argument('--custom_barcodes',
                                help='CSV file containing custom barcode sequences')
