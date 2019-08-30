@@ -146,7 +146,7 @@ NATIVE_BARCODES = [
             start_sequence=('NB24_rev', 'GCATAGTTCTGCATGATGGGTTAG'),
             end_sequence=('NB24', 'CTAACCCATCATGCAGAACTATGC'))]
 
-RAPID_BARCODES = [
+PCR_BARCODES = [
     # Other barcoding kits (like the PCR and rapid barcodes) use the forward barcode at the
     # start of the read and the rev comp barcode at the end of the read.
     Adapter('Barcode 1 (forward)',
@@ -438,44 +438,35 @@ RAPID_BARCODES = [
             start_sequence=('BC96', 'CTGAACGGTCATAGAGTCCACCAT'),
             end_sequence=('BC96_rev', 'ATGGTGGACTCTATGACCGTTCAG'))]
 
-OTHER_ADAPTERS = [
+RAPID_BARCODES = [
     Adapter('Barcode 1 (reverse)',
-            start_sequence=('BC01_rev', 'CACAAAGACACCGACAACTTTCTT'),
-            end_sequence=('BC01', 'AAGAAAGTTGTCGGTGTCTTTGTG')),
+            start_sequence=('BC01', 'AAGAAAGTTGTCGGTGTCTTTGTG')),
     Adapter('Barcode 2 (reverse)',
-            start_sequence=('BC02_rev', 'ACAGACGACTACAAACGGAATCGA'),
-            end_sequence=('BC02', 'TCGATTCCGTTTGTAGTCGTCTGT')),
+            start_sequence=('BC02', 'TCGATTCCGTTTGTAGTCGTCTGT')),
     Adapter('Barcode 3 (reverse)',
-            start_sequence=('BC03_rev', 'CCTGGTAACTGGGACACAAGACTC'),
-            end_sequence=('BC03', 'GAGTCTTGTGTCCCAGTTACCAGG')),
+            start_sequence=('BC03', 'GAGTCTTGTGTCCCAGTTACCAGG')),
     Adapter('Barcode 4 (reverse)',
-            start_sequence=('BC04_rev', 'TAGGGAAACACGATAGAATCCGAA'),
-            end_sequence=('BC04', 'TTCGGATTCTATCGTGTTTCCCTA')),
+            start_sequence=('BC04', 'TTCGGATTCTATCGTGTTTCCCTA')),
     Adapter('Barcode 5 (reverse)',
-            start_sequence=('BC05_rev', 'AAGGTTACACAAACCCTGGACAAG'),
-            end_sequence=('BC05', 'CTTGTCCAGGGTTTGTGTAACCTT')),
+            start_sequence=('BC05', 'CTTGTCCAGGGTTTGTGTAACCTT')),
     Adapter('Barcode 6 (reverse)',
-            start_sequence=('BC06_rev', 'GACTACTTTCTGCCTTTGCGAGAA'),
-            end_sequence=('BC06', 'TTCTCGCAAAGGCAGAAAGTAGTC')),
+            start_sequence=('BC06', 'TTCTCGCAAAGGCAGAAAGTAGTC')),
     Adapter('Barcode 7 (reverse)',
-            start_sequence=('BC07_rev', 'AAGGATTCATTCCCACGGTAACAC'),
-            end_sequence=('BC07', 'GTGTTACCGTGGGAATGAATCCTT')),
+            start_sequence=('BC07', 'GTGTTACCGTGGGAATGAATCCTT')),
     Adapter('Barcode 8 (reverse)',
-            start_sequence=('BC08_rev', 'ACGTAACTTGGTTTGTTCCCTGAA'),
-            end_sequence=('BC08', 'TTCAGGGAACAAACCAAGTTACGT')),
+            start_sequence=('BC08', 'TTCAGGGAACAAACCAAGTTACGT')),
     Adapter('Barcode 9 (reverse)',
-            start_sequence=('BC09_rev', 'AACCAAGACTCGCTGTGCCTAGTT'),
-            end_sequence=('BC09', 'AACTAGGCACAGCGAGTCTTGGTT')),
+            start_sequence=('BC09', 'AACTAGGCACAGCGAGTCTTGGTT')),
     Adapter('Barcode 10 (reverse)',
-            start_sequence=('BC10_rev', 'GAGAGGACAAAGGTTTCAACGCTT'),
-            end_sequence=('BC10', 'AAGCGTTGAAACCTTTGTCCTCTC')),
+            start_sequence=('BC10', 'AAGCGTTGAAACCTTTGTCCTCTC')),
     Adapter('Barcode 11 (reverse)',
-            start_sequence=('BC11_rev', 'TCCATTCCCTCCGATAGATGAAAC'),
-            end_sequence=('BC11', 'GTTTCATCTATCGGAGGGAATGGA')),
+            start_sequence=('BC11', 'GTTTCATCTATCGGAGGGAATGGA')),
     Adapter('Barcode 12 (reverse)',
-            start_sequence=('BC12_rev', 'TCCGATTCTGCTTCTTTCTACCTG'),
-            end_sequence=('BC12', 'CAGGTAGAAAGAAGCAGAATCGGA')),
+            start_sequence=('BC12', 'CAGGTAGAAAGAAGCAGAATCGGA')),
+]
 
+
+OTHER_ADAPTERS = [
     Adapter('Barcode 13 (reverse)',
             start_sequence=('BC13', 'AGAACGACTTCCATACTCGTGTGA'),
             end_sequence=('BC13_rev', 'TCACACGAGTATGGAAGTCGTTCT')),
