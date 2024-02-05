@@ -42,9 +42,12 @@ from .misc import (
 from .nanopore_read import NanoporeRead
 from .version import __version__
 
+ADAPTERS = None
+
 
 def main():
     args = get_arguments()
+    global ADAPTERS
     ADAPTERS = load_adapters_from_file(args.adapters_file)
     reads, check_reads, read_type = load_reads(
         args.input, args.verbosity, args.print_dest, args.check_reads
