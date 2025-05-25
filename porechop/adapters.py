@@ -78,14 +78,12 @@ ADAPTERS = [Adapter('SQK-NSK007',
                     start_sequence=('SQK-NSK007_Y_Top', 'AATGTACTTCGTTCAGTTACGTATTGCT'),
                     end_sequence=('SQK-NSK007_Y_Bottom', 'GCAATACGTAACTGAACGAAGT')),
 
-
             Adapter('Rapid',
                     start_sequence=('Rapid_adapter',
                                     'GTTTTCGCATTTATCGTGAAACGCTTTCGCGTTTTTCGTGCGCCGCTTCA')),
 
             Adapter('RBK004_upstream',
                     start_sequence=('RBK004_upstream', 'AATGTACTTCGTTCAGTTACGGCTTGGGTGTTTAACC')),
-
 
             Adapter('SQK-MAP006',
                     start_sequence=('SQK-MAP006_Y_Top_SK63',    'GGTTGTTTCTGTTGGTGCTGATATTGCT'),
@@ -95,7 +93,39 @@ ADAPTERS = [Adapter('SQK-NSK007',
                     start_sequence=('SQK-MAP006_Short_Y_Top_LI32',    'CGGCGTCTGCTTGGGTGTTTAACCT'),
                     end_sequence=  ('SQK-MAP006_Short_Y_Bottom_LI33', 'GGTTAAACACCCAAGCAGACGCCG')),
 
+            # New chemistry V14, Last updated: 25/11/2024, https://nanoporetech.com/document/chemistry-technical-document#adapter-sequences
+            Adapter('Ligation Adapter LA',
+                    start_sequence=('LA_Top', 'TTTTTTTTCCTGTACTTCGTTCAGTTACGTATTGCT'),
+                    end_sequence=('LA_Bottom', 'GCAATACGTAACTGAACGAAGTACAGG')),
 
+            Adapter('Native Adapter NA',
+                    start_sequence=('NA_Top', 'TTTTTTTTCCTGTACTTCGTTCAGTTACGTATTGCT'),
+                    end_sequence=('NA_Bottom', 'ACGTAACTGAACGAAGTACAGG')),
+
+            Adapter('cDNA Primer cPRM',
+                    start_sequence=('cPRM_Forward', 'ATCGCCTACCGTGACAAGAAAGTTGTCGGTGTCTTTGTGACTTGCCTGTCGCTCTATCTTC'),
+                    end_sequence=('cPRM_Reverse', 'ATCGCCTACCGTGACAAGAAAGTTGTCGGTGTCTTTGTGTTTCTGTTGGTGCTGATATTGC')),
+
+            Adapter('Rapid Adapter RA',
+                    start_sequence=('RA_TOP',
+                                    'TTTTTTTTCCTGTACTTCGTTCAGTTACGTATTGCT')),
+
+            Adapter('RT Primer RTP',
+                    start_sequence=('RTP',
+                                    'CTTGCCTGTCGCTCTATCTTCAGAGGAG')),
+
+            Adapter('Strand Switching Primer II SSPII',
+                    start_sequence=('SSPII',
+                                    'TTTCTGTTGGTGCTGATATTGCTTTVVVVTTVVVVTTVVVVTTVVVVTTTmGmGmG')),
+
+            Adapter('cDNA RT Adapter CRTA',
+                    start_sequence=('CRTA',
+                                    'CTTGCGGGCGGCGGACTCTCCTCTGAAGATAGAGCGACAGGCAAG')),
+
+            Adapter('Rapid Adapter T RAP T',
+                    start_sequence=('RAP_T',
+                                    'TTTTTTTTCCTGTACTTCGTTCAGTTACGTATTGCT')),
+            
             # The PCR adapters are used both in PCR DNA kits and some cDNA kits.
             Adapter('PCR adapters 1',
                     start_sequence=('PCR_1_start', 'ACTTGCCTGTCGCTCTATCTTC'),
